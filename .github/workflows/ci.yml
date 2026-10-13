@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
-      - run: python -m pip install --require-hashes -r requirements/lint.txt
+      - run: python -m pip install --require-hashes -r .github/requirements/lint.txt
       - run: python -m pip install --no-deps -e .
       - run: ruff check .
       - run: ruff format --check .
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install --require-hashes -r requirements/test.txt
+      - run: python -m pip install --require-hashes -r .github/requirements/test.txt
       - run: python -m pip install --no-deps -e .
       - run: pytest
 
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
-      - run: python -m pip install --require-hashes -r requirements/build.txt
+      - run: python -m pip install --require-hashes -r .github/requirements/build.txt
       - run: python -m build
       - run: python -m twine check --strict dist/*
       - name: PyPI description has no repository-relative images or links

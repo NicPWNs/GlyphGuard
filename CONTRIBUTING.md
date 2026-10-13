@@ -23,12 +23,12 @@ If a bypass lets an attack get past a deployed system, report it privately inste
 git clone https://github.com/NicPWNs/GlyphGuard && cd GlyphGuard
 python -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
-pip install --require-hashes -r requirements/lint.txt   # the exact, hash-pinned CI tools
+pip install --require-hashes -r .github/requirements/lint.txt   # the exact, hash-pinned CI tools
 pip install --no-deps -e .
 ```
 
-The tool versions live in `requirements/*.in`, and the hash-pinned locks in
-`requirements/*.txt` are generated with `uv pip compile` (see each file's header for the
+The tool versions live in `.github/requirements/*.in`, and the hash-pinned locks in
+`.github/requirements/*.txt` are generated with `uv pip compile` (see each file's header for the
 exact command). Dependabot keeps them current.
 
 Before opening a pull request:
