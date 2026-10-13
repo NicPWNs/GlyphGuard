@@ -5,5 +5,7 @@
 pip3 install --no-deps .
 
 for fuzzer in "$SRC"/glyphguard/fuzz/fuzz_*.py; do
-  compile_python_fuzzer "$fuzzer"
+  # The fuzzer is bundled with PyInstaller, which needs telling about the package's
+  # data files (catalog.toml, profiles.toml).
+  compile_python_fuzzer "$fuzzer" --collect-data glyphguard
 done
