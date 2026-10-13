@@ -1,12 +1,11 @@
 [build-system]
-requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4", "hatch-fancy-pypi-readme>=24"]
 build-backend = "hatchling.build"
 
 [project]
 name = "glyphguard"
-dynamic = ["version"]
+dynamic = ["version", "readme"]
 description = "See what the machine sees. Unicode security for humans, filters, and models."
-readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -50,6 +49,26 @@ source = "vcs"  # the version comes from the latest v* git tag
 [tool.hatch.version.raw-options]
 fallback_version = "0.0.0"  # source archives without git history, e.g. the GitHub Action
 local_scheme = "no-local-version"
+
+# The PyPI description is README.md with repository-relative images and links made
+# absolute: PyPI can't resolve paths like docs/assets/... the way GitHub does.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '(src|srcset)="(?!https?://|#)([^"]+)"'
+replacement = '\1="https://raw.githubusercontent.com/NicPWNs/GlyphGuard/main/\2"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'href="(?!https?://|#)([^"]+)"'
+replacement = 'href="https://github.com/NicPWNs/GlyphGuard/blob/main/\1"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\((?!https?://|#)([^)]+)\)'
+replacement = '](https://github.com/NicPWNs/GlyphGuard/blob/main/\1)'
 
 [tool.hatch.build.targets.sdist]
 include = ["src/glyphguard", "scripts", "tests", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"]

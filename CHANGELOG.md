@@ -6,6 +6,12 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Images and links in the PyPI project description. They were repository-relative paths
+  that only resolve on GitHub; the build now rewrites them to absolute URLs, and CI fails
+  if a relative one slips through.
+
 ## [0.1.0] - 2026-10-13
 
 First release: the detection, decoding and sanitization core.
