@@ -14,6 +14,7 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ### Added
 
+- Python 3.15 support, tested in CI on Linux, macOS and Windows.
 - Coverage-guided fuzzing with ClusterFuzzLite and Atheris (`fuzz/`): short runs on every
   pull request and a weekly batch run.
 - Signed releases: each GitHub Release gets SLSA level 3 provenance (`.intoto.jsonl`) and
