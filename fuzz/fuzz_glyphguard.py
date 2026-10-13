@@ -1,8 +1,8 @@
 """Coverage-guided fuzz target for GlyphGuard (Atheris, run by ClusterFuzzLite).
 
 Feeds arbitrary Unicode text to detection, sanitization, reveal, SARIF output, protected
-term matching, skeletons, hostname checks and escape decoding, and checks the invariants
-the rest of the toolkit relies on. Any exception is a finding.
+term matching, skeletons, hostname checks, escape decoding and MCP tool scans, and checks
+the invariants the rest of the toolkit relies on. Any exception is a finding.
 
 Run locally (Linux or macOS): pip install atheris && python fuzz/fuzz_glyphguard.py
 """
@@ -67,6 +67,8 @@ def check(text: str) -> None:
     skeleton = gg.skeleton(text)
     assert gg.skeleton(skeleton) == skeleton
     gg.restriction_level(text)
+    for tf in gg.mcp.scan_tools("s", [{"name": text[:64], "description": text}]):
+        assert tf.finding.message.isascii(), tf.finding.message
     for f in detect_escaped(text):
         assert 0 <= f.start < f.end <= len(text), (f.technique_id, f.start, f.end, len(text))
         assert f.message.isascii(), f.message
