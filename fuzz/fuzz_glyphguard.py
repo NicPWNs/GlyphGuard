@@ -1,0 +1,71 @@
+"""Coverage-guided fuzz target for GlyphGuard (Atheris, run by ClusterFuzzLite).
+
+Feeds arbitrary Unicode text to detection, sanitization, reveal and SARIF output, and
+checks the invariants the rest of the toolkit relies on. Any exception is a finding.
+
+Run locally (Linux or macOS): pip install atheris && python fuzz/fuzz_glyphguard.py
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+
+try:
+    import atheris
+except ImportError:  # the invariants are also exercised by tests/test_fuzz_harness.py
+    atheris = None
+
+if atheris is not None:
+    with atheris.instrument_imports():
+        import glyphguard as gg
+        from glyphguard import stego
+        from glyphguard.catalog import Severity
+        from glyphguard.sarif import Located, to_sarif
+else:
+    import glyphguard as gg
+    from glyphguard import stego
+    from glyphguard.catalog import Severity
+    from glyphguard.sarif import Located, to_sarif
+
+PROFILES = tuple(gg.profiles())
+
+
+def check(text: str) -> None:
+    """Assert GlyphGuard's invariants for one input."""
+    findings = gg.detect(text)
+    assert findings == sorted(findings, key=lambda f: (f.start, f.end, f.technique_id))
+    for f in findings:
+        assert 0 <= f.start < f.end <= len(text), (f.technique_id, f.start, f.end, len(text))
+        assert f.codepoints == tuple(ord(c) for c in text[f.start : f.end])
+        assert f.message.isascii(), f.message
+
+    for profile in PROFILES:
+        once = gg.sanitize(text, profile).text
+        assert gg.sanitize(once, profile).text == once, profile
+
+    revealed = gg.reveal(text)
+    assert not [f for f in gg.detect(revealed) if f.severity >= Severity.LOW], revealed
+
+    located = [Located("fuzz.txt", f, 1, 1, 1, 2) for f in findings]
+    json.dumps(to_sarif(located, version="0"))
+
+    stego.decode_tags(text)
+    stego.decode_variation_selectors(text)
+    stego.decode_binary(text[:256])
+
+
+def test_one_input(data: bytes) -> None:
+    provider = atheris.FuzzedDataProvider(data)
+    check(provider.ConsumeUnicode(4096))
+
+
+def main() -> None:
+    if atheris is None:
+        raise SystemExit("pip install atheris to run the fuzzer")
+    atheris.Setup(sys.argv, test_one_input)
+    atheris.Fuzz()
+
+
+if __name__ == "__main__":
+    main()

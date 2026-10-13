@@ -73,6 +73,7 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
+      hashes: ${{ steps.hashes.outputs.hashes }}
     steps:
       - name: Resolve the tag
         id: meta
@@ -120,6 +121,10 @@ jobs:
           python -m pip install --require-hashes -r requirements/test.txt
           python -m pip install --no-deps dist/*.whl
           python -m pytest tests -o addopts="--strict-markers"
+      - name: Hash the built files for SLSA provenance
+        id: hashes
+        working-directory: dist
+        run: echo "hashes=$(sha256sum -- * | base64 -w0)" >> "$GITHUB_OUTPUT"
       - name: Attest build provenance
         # Artifact attestations need a public repository (or GitHub Enterprise Cloud).
         if: ${{ !github.event.repository.private }}
@@ -184,3 +189,30 @@ jobs:
           name: dist
           path: dist
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  provenance:
+    name: SLSA provenance
+    needs: [build, github-release]
+    permissions:
+      actions: read # read the workflow run being attested
+      id-token: write # sign the provenance
+      contents: write # attach it to the release
+    # The SLSA generator must be referenced by tag, not SHA: it verifies its own version.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0 # zizmor: ignore[unpinned-uses]
+    with:
+      base64-subjects: ${{ needs.build.outputs.hashes }}
+      upload-assets: true
+      upload-tag-name: ${{ needs.build.outputs.tag }}
+      provenance-name: glyphguard-${{ needs.build.outputs.version }}.intoto.jsonl
+
+  sign:
+    name: Sigstore signatures
+    # After PyPI, so the signing workflow can check the files against what was published.
+    needs: [build, github-release, pypi]
+    if: ${{ !cancelled() && needs.github-release.result == 'success' }}
+    permissions:
+      contents: write # attach the signatures to the release
+      id-token: write # keyless Sigstore signing
+    uses: ./.github/workflows/sign-release.yml # zizmor: ignore[self-repository]
+    with:
+      tag: ${{ needs.build.outputs.tag }}

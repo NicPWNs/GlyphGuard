@@ -6,6 +6,20 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Terminal escape findings could include raw characters from the input's OSC command
+  field in their message, so `glyphguard detect` could print hidden or bidi characters to
+  the terminal. The field is now escaped. Found by the new fuzz target.
+
+### Added
+
+- Coverage-guided fuzzing with ClusterFuzzLite and Atheris (`fuzz/`): short runs on every
+  pull request and a weekly batch run.
+- Signed releases: each GitHub Release gets SLSA level 3 provenance (`.intoto.jsonl`) and
+  Sigstore signatures (`.sigstore.json`), checked against the files on PyPI before
+  signing. See "Verifying releases" in SECURITY.md.
+
 ### Changed
 
 - CI and release tooling (pytest, hypothesis, ruff, mypy, build, twine) is installed from

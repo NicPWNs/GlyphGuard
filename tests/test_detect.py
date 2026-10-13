@@ -109,6 +109,13 @@ def test_osc52_with_invalid_base64_keeps_raw_payload() -> None:
     assert payload.text == "not base64!"
 
 
+def test_osc_command_is_escaped_in_message() -> None:
+    # Found by the fuzzer: a C1 OSC introducer followed by a non-ASCII command byte.
+    (finding,) = gg.detect("\x9d\x80", techniques="terminal-escape")
+    assert finding.message.isascii()
+    assert "'\\x80'" in finding.message
+
+
 def test_messages_are_ascii() -> None:
     hostile = "\x1b[31m" + stego.encode_variation_selectors("\x1b]0;pwned\x07") + "\u202e\u0435"
     for finding in gg.detect(hostile):

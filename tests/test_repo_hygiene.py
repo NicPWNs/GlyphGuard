@@ -21,6 +21,8 @@ ASCII_ONLY = sorted(
         "tests/**/*.py",
         "tests/**/*.toml",
         "scripts/*",
+        "fuzz/*",
+        ".clusterfuzzlite/*",
         ".github/**/*",
         ".pre-commit-hooks.yaml",
         "pyproject.toml",

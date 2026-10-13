@@ -634,7 +634,9 @@ def _classify_escape(match: re.Match[str]) -> tuple[Severity, str, Payload | Non
                     Payload("osc-8", url.encode("utf-8", errors="replace")),
                 )
             return MEDIUM, "OSC 8 hyperlink terminator", None
-        return MEDIUM, f"OSC {command or '?'} sequence (e.g. sets the window title)", None
+        # The command comes from untrusted input: never put it in a message unescaped.
+        label = command if command.isascii() and command.isdigit() else ascii(command)
+        return MEDIUM, f"OSC {label} sequence (e.g. sets the window title)", None
     if match.lastgroup == "csi":
         final = seq[-1]
         params = seq[2:-1] if seq.startswith("\x1b") else seq[1:-1]

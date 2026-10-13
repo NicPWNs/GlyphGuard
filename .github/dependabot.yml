@@ -13,6 +13,16 @@ updates:
     commit-message:
       prefix: ci
 
+  # Keeps the digest-pinned fuzzing base image current.
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+
   # Keeps the hash-pinned CI tool locks in requirements/ current.
   - package-ecosystem: pip
     directory: /requirements

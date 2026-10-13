@@ -1,0 +1,80 @@
+name: Sign release
+
+# Signs a GitHub Release's wheel and sdist with Sigstore (keyless, tied to this
+# repository's workflow identity) and attaches the .sigstore.json bundles to the release.
+# Called by the release workflow; can also be run by hand to sign an existing release.
+# Before signing, the files are checked against the hashes PyPI recorded at upload, so a
+# signature always vouches for exactly what was published.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sign (e.g. v0.1.2)
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # attach the signatures to the release
+      id-token: write # keyless Sigstore signing
+    steps:
+      - name: Download the release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
+            --pattern '*.whl' --pattern '*.tar.gz'
+          ls -l dist
+
+      - name: Check the files match PyPI
+        env:
+          TAG: ${{ inputs.tag }}
+        shell: python
+        run: |
+          import hashlib, json, os, pathlib, sys, urllib.error, urllib.request
+
+          version = os.environ["TAG"].removeprefix("v")
+          url = f"https://pypi.org/pypi/glyphguard/{version}/json"
+          try:
+              with urllib.request.urlopen(url, timeout=60) as response:
+                  published = {f["filename"]: f["digests"]["sha256"] for f in json.load(response)["urls"]}
+          except urllib.error.HTTPError as err:
+              if err.code != 404:
+                  raise
+              print(f"::warning::glyphguard {version} is not on PyPI; signing the release files as-is")
+              sys.exit(0)
+          files = sorted(pathlib.Path("dist").iterdir())
+          if {f.name for f in files} != set(published):
+              sys.exit(f"::error::release files {[f.name for f in files]} differ from PyPI {sorted(published)}")
+          for f in files:
+              digest = hashlib.sha256(f.read_bytes()).hexdigest()
+              if digest != published[f.name]:
+                  sys.exit(f"::error::{f.name} does not match PyPI ({digest} != {published[f.name]})")
+              print(f"{f.name}: matches PyPI ({digest})")
+
+      - name: Sign with Sigstore
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: ./dist/*.whl ./dist/*.tar.gz
+
+      - name: Attach the signatures to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          gh release upload "$TAG" dist/*.sigstore.json --clobber --repo "$GITHUB_REPOSITORY"
