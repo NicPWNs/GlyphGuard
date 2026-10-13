@@ -80,6 +80,7 @@ $ glyphguard detect $(git ls-files)                    # file:line:col findings,
 $ glyphguard sanitize -p llm-input < prompt.txt        # cleaned text on stdout
 $ glyphguard check -p admin -p support "$NAME"         # disguised protected terms, exit 1 if found
 $ glyphguard confusable paypal "$NAME"                 # can these pass for each other?
+$ glyphguard url -p paypal.com "$LINK"                 # lookalike domains and punycode in links
 $ glyphguard catalog                                   # every technique and profile
 ```
 
@@ -189,6 +190,22 @@ assert gg.is_confusable("p\N{CYRILLIC SMALL LETTER A}ypal", "paypal")  # UTS #39
 `Guard` also takes `mode="contains"` (match inside words, with an `allow` list for words
 like "supportive") and `mode="exact"` (the whole text is the term).
 
+**Catch lookalike links.** `glyphguard.net` decodes punycode the way a browser shows it
+and judges every label: mixed scripts, all-lookalike words, styled letters, invisible
+characters, and `user@host` tricks. Name the domains you defend to catch impersonation:
+
+```python
+from glyphguard.net import check_hostname, check_url
+
+result = check_hostname("xn--80ak6aa92e.com", protect=["apple.com"])
+assert result.deceptive and result.reads_as == "apple.com"
+assert result.lookalike_of == ("apple.com",)  # shown as an all-Cyrillic word
+
+assert check_url("https://paypal.com@login.example/").deceptive  # really goes to login.example
+assert check_hostname("paypal.com.verify.example", protect=["paypal.com"]).deceptive
+assert not check_hostname("m\N{LATIN SMALL LETTER U WITH DIAERESIS}nchen.de").deceptive  # a real IDN
+```
+
 **Guard your AI agents' instructions.** Coding agents obey `AGENTS.md`, `CLAUDE.md`,
 Cursor and Copilot rules, skills and MCP configs, so hidden text in them is a prompt
 injection waiting to run. The [Rules File Backdoor](https://thehackernews.com/2025/03/new-rules-file-backdoor-attack-lets.html)
@@ -296,8 +313,8 @@ GlyphGuard is **pre-alpha**. Done: the detection, decoding and sanitization core
 and lookalike detection with UTS #39 skeletons and protected-term matching (v0.2). Next:
 
 - **v0.3 scanning:** `glyphguard scan` with strict handling of AI agent instruction files
-  is done; next are hidden characters written as escapes in JSON and other configs,
-  lookalike hostnames in links, and pinning of MCP tool descriptions to catch rug pulls.
+  and lookalike-hostname checks are done; next are hidden characters written as escapes
+  in JSON and other configs, and pinning of MCP tool descriptions to catch rug pulls.
 - **v0.4 red team:** a mutator for every technique, plus adapters for PyRIT, garak and
   promptfoo, and guardrail robustness scoring.
 - **v0.5 integrations:** LLM SDK and framework middleware, and an MCP server.

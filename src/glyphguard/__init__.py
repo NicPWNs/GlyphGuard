@@ -14,7 +14,7 @@ reordering, terminal escapes, stacked combining marks and lookalike letters.
 
 from importlib import metadata as _metadata
 
-from glyphguard import confusables, scan, stego
+from glyphguard import confusables, net, scan, stego
 from glyphguard.catalog import Severity, Technique, techniques
 from glyphguard.confusables import is_confusable, restriction_level, skeleton
 from glyphguard.detect import Options, detect, payloads
@@ -50,6 +50,7 @@ __all__ = [
     "detect",
     "inspect",
     "is_confusable",
+    "net",
     "payloads",
     "profiles",
     "restriction_level",
