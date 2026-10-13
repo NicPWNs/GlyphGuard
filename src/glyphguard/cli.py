@@ -272,7 +272,11 @@ def cmd_scan(args: argparse.Namespace, out: _Out) -> int:
 
     def analyze(name: str, text: str) -> list[Finding]:
         return scan_text(
-            text, name, techniques=args.technique or None, min_severity=args.min_severity
+            text,
+            name,
+            techniques=args.technique or None,
+            min_severity=args.min_severity,
+            escapes={"auto": None, "all": True, "none": False}[args.escapes],
         )
 
     code = _report(args, out, sources, analyze)
@@ -594,6 +598,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--agents-only", action="store_true", help="scan only AI agent instruction files"
+    )
+    p.add_argument(
+        "--escapes",
+        choices=("auto", "all", "none"),
+        default="auto",
+        help="decode unicode escapes and report what they hide: in JSON files (auto), "
+        "in every file, or nowhere",
     )
     p.add_argument(
         "--list-agent-files",

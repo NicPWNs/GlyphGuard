@@ -222,6 +222,10 @@ $ glyphguard scan --agents-only          # just the agent files
 $ glyphguard scan --list-agent-files     # which files count
 ```
 
+`scan` also decodes Unicode escapes in JSON files, where an MCP tool description can hide
+tag smuggling as plain-ASCII escape sequences that a raw scan can't see. Use
+`--escapes all` to decode them in every file, or `--escapes none` to skip it.
+
 **Block hidden Unicode in pull requests.** The
 [GitHub Action](https://github.com/marketplace/actions/glyphguard) runs `glyphguard scan` on
 every tracked file, annotates findings inline on the diff, and can report them to the
@@ -313,8 +317,8 @@ GlyphGuard is **pre-alpha**. Done: the detection, decoding and sanitization core
 and lookalike detection with UTS #39 skeletons and protected-term matching (v0.2). Next:
 
 - **v0.3 scanning:** `glyphguard scan` with strict handling of AI agent instruction files
-  and lookalike-hostname checks are done; next are hidden characters written as escapes
-  in JSON and other configs, and pinning of MCP tool descriptions to catch rug pulls.
+  lookalike-hostname checks and decoding of escaped hidden text in JSON are done; next is
+  pinning of MCP tool descriptions to catch rug pulls.
 - **v0.4 red team:** a mutator for every technique, plus adapters for PyRIT, garak and
   promptfoo, and guardrail robustness scoring.
 - **v0.5 integrations:** LLM SDK and framework middleware, and an MCP server.
