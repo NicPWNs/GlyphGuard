@@ -1,5 +1,5 @@
 name: GlyphGuard
-description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes, lookalike letters) in pull requests.
+description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes, lookalike letters) in pull requests, strictest in AI agent instruction files.
 author: Nic Jones
 branding:
   icon: eye
@@ -77,7 +77,7 @@ runs:
       run: |
         set -euo pipefail
         echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
-        args=(detect --format github --sarif "$SARIF_FILE"
+        args=(scan --format github --sarif "$SARIF_FILE"
               --fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
         read -r -a patterns <<< "$EXCLUDE"
         for pattern in ${patterns[@]+"${patterns[@]}"}; do

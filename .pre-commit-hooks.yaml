@@ -1,6 +1,6 @@
 - id: glyphguard
   name: glyphguard
-  description: Block hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes).
-  entry: glyphguard detect
+  description: Block hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes, lookalikes), strictest in AI agent instruction files.
+  entry: glyphguard scan
   language: python
   types: [text]
