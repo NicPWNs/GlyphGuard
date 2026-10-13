@@ -17,8 +17,8 @@
   <a href="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://pypi.org/project/glyphguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/glyphguard?color=3ddc84"></a>
   <a href="https://pypi.org/project/glyphguard/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/glyphguard?color=3776ab"></a>
-  <img alt="Unicode 18.0" src="https://img.shields.io/badge/unicode-18.0-3ddc84">
-  <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-3ddc84">
+  <a href="https://www.unicode.org/versions/Unicode18.0.0/"><img alt="Unicode 18.0" src="https://img.shields.io/badge/unicode-18.0-3ddc84"></a>
+  <a href="pyproject.toml"><img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-3ddc84"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <br>
   <a href="https://www.bestpractices.dev/projects/15450"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/15450/badge"></a>
@@ -202,7 +202,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: NicPWNs/GlyphGuard@v0.1.2
+      - uses: NicPWNs/GlyphGuard@v0.2.0
         with:
           fail-on: medium        # info | low | medium | high | critical
           upload-sarif: true     # show findings under Security > Code scanning
@@ -215,7 +215,7 @@ Or run it before every commit with [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/NicPWNs/GlyphGuard
-    rev: v0.1.0
+    rev: v0.2.0
     hooks:
       - id: glyphguard
 ```

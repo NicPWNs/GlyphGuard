@@ -6,6 +6,8 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Security
 
 - Terminal escape findings could include raw characters from the input's OSC command
@@ -99,7 +101,8 @@ First release: the detection, decoding and sanitization core.
 - Conformance vectors, a multilingual benign corpus, property-based tests, and a
   repo-hygiene test that runs GlyphGuard on its own sources.
 
-[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.2.0
 [0.1.2]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.2
 [0.1.1]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.1
 [0.1.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.0
