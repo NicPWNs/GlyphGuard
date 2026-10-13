@@ -138,8 +138,8 @@ def width(s: str, size: float) -> float:
 # Every keyframe states the complete state of its layer and the timing is steps(1, end),
 # so each frame holds exactly until the next: nothing interpolates or lingers half-cut.
 
-CYCLE_S = 9
-FRAME = 0.5  # percent of the cycle per glitch frame (45 ms)
+CYCLE_S = 5.8
+FRAME = 4.5 / CYCLE_S  # percent of the cycle per glitch frame (45 ms)
 WORD = "GlyphGuard"
 # One lookalike per letter of WORD, and the script group it belongs to.
 LOOKALIKES = (
@@ -197,13 +197,18 @@ def wordmark_frames() -> dict[str, dict[float, State]]:
         frames[layer][at + FRAME] = full
         frames[ghosts[0]][at + FRAME] = frames[ghosts[1]][at + FRAME] = None
 
+    def at(seconds: float) -> float:
+        return round(seconds / CYCLE_S * 100, 3)
+
+    # The plain wordmark only shows briefly, so the effect is visible at a glance: about
+    # 0.25 s after loading, 0.4 s between the phases and 1.1 s at the end of each loop.
     py_ghosts, cf_ghosts = ("pc", "pm"), ("cc", "cm")
-    glitch(14.0, ("yp",), ("py",), py_ghosts)
-    jitter(26.0, "py", py_ghosts)
-    glitch(38.0, ("py",), ("yp",), py_ghosts)
-    glitch(58.0, ("rest", "yp"), ("cf",), cf_ghosts)
-    jitter(70.0, "cf", cf_ghosts)
-    glitch(82.0, ("cf",), ("rest", "yp"), cf_ghosts)
+    glitch(at(0.25), ("yp",), ("py",), py_ghosts)
+    jitter(at(1.1), "py", py_ghosts)
+    glitch(at(1.9), ("py",), ("yp",), py_ghosts)
+    glitch(at(2.5), ("rest", "yp"), ("cf",), cf_ghosts)
+    jitter(at(3.6), "cf", cf_ghosts)
+    glitch(at(4.75), ("cf",), ("rest", "yp"), cf_ghosts)
     return frames
 
 
