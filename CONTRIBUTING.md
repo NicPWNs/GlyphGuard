@@ -34,7 +34,7 @@ exact command). Dependabot keeps them current.
 Before opening a pull request:
 
 ```console
-pytest                                  # unit, property, conformance, README and hygiene tests
+pytest                                  # unit, property, conformance, docs examples and hygiene tests
 ruff check . && ruff format --check .
 mypy
 ```

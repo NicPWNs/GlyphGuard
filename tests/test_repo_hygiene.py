@@ -29,6 +29,7 @@ ASCII_ONLY = sorted(
         "CONTRIBUTING.md",
         "SECURITY.md",
         "CHANGELOG.md",
+        "docs/guide.md",
     )
     for p in ROOT.glob(pattern)
     if "_data" not in p.parts and p.is_file()
