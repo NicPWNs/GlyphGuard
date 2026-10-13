@@ -1,5 +1,5 @@
 name: GlyphGuard
-description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes, lookalike letters) in pull requests, strictest in AI agent instruction files.
+description: 'Block hidden Unicode in pull requests: invisible text, ASCII smuggling, Trojan Source bidi, homoglyphs and prompt injection.'
 author: Nic Jones
 branding:
   icon: eye

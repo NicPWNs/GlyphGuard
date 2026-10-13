@@ -5,19 +5,24 @@ build-backend = "hatchling.build"
 [project]
 name = "glyphguard"
 dynamic = ["version", "readme"]
-description = "See what the machine sees. Unicode security for humans, filters, and models."
+description = "Detect, decode and remove hidden Unicode: invisible text, ASCII smuggling, homoglyphs, Trojan Source bidi and prompt injection in LLM input, code and AI agent files."
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Nic Jones" }]
 keywords = [
-  "unicode", "security", "homoglyph", "confusables", "prompt-injection", "ascii-smuggling",
-  "trojan-source", "llm", "red-team", "sanitization",
+  "unicode", "unicode-security", "security", "prompt-injection", "llm", "llm-security",
+  "ai-security", "guardrails", "homoglyph", "homograph", "confusables", "uts39",
+  "ascii-smuggling", "tag-smuggling", "invisible-characters", "zero-width", "steganography",
+  "trojan-source", "bidi", "punycode", "idn", "sanitization", "mcp", "sarif",
+  "github-action", "pre-commit", "red-team",
 ]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Developers",
   "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Environment :: Console",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
@@ -26,14 +31,21 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.15",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Quality Assurance",
   "Topic :: Text Processing :: Filters",
+  "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
 dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/NicPWNs/GlyphGuard"
+Documentation = "https://github.com/NicPWNs/GlyphGuard/blob/main/docs/guide.md"
+Repository = "https://github.com/NicPWNs/GlyphGuard"
+"GitHub Action" = "https://github.com/marketplace/actions/glyphguard"
 Issues = "https://github.com/NicPWNs/GlyphGuard/issues"
 Changelog = "https://github.com/NicPWNs/GlyphGuard/blob/main/CHANGELOG.md"
 Security = "https://github.com/NicPWNs/GlyphGuard/security/policy"

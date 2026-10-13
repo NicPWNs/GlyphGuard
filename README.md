@@ -27,6 +27,11 @@
 
 ---
 
+**GlyphGuard** is a Python library, CLI and GitHub Action that finds, decodes and removes
+hidden Unicode: invisible characters, ASCII (tag) smuggling, emoji and variation-selector
+payloads, bidi overrides (Trojan Source), terminal escapes and homoglyph lookalikes. Use it
+on LLM prompts and output, source code, AI agent rules files and MCP tools.
+
 A prompt that says *"Summarize this doc."* can carry a second, invisible instruction. An
 emoji can carry a shell command. A rules file can tell your coding agent to do something
 no reviewer saw. GlyphGuard shows you the difference:
