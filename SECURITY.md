@@ -51,8 +51,7 @@ needs more than 90 days, we'll explain why and agree on a new date before then.
 
 ## Out of scope
 
-- Techniques that aren't in the catalog yet (for example lookalike confusables before
-  v0.2). Please open a feature request.
+- Techniques that aren't in the catalog yet. Please open a feature request.
 - False positives. Please open a regular issue.
 
 ## Verifying releases
