@@ -51,28 +51,32 @@ needs more than 90 days, we'll explain why and agree on a new date before then.
 
 ## Out of scope
 
-- Techniques that aren't in the catalog yet (for example lookalike confusables before
-  v0.2). Please open a feature request.
+- Techniques that aren't in the catalog yet. Please open a feature request.
 - False positives. Please open a regular issue.
 
 ## Verifying releases
 
-Every release is built by GitHub Actions from a tagged commit, and uploaded to PyPI with
-Trusted Publishing (PyPI also stores its own attestations). Releases from v0.1.3 on carry
-three independent proofs; v0.1.0 to v0.1.2 carry Sigstore signatures, added after
-checking the files against PyPI.
+Every release is built by GitHub Actions and uploaded to PyPI with Trusted Publishing
+(PyPI also stores its own attestations). Releases from v0.2.0 on carry three independent
+proofs; v0.1.0 to v0.1.2 carry Sigstore signatures, added after checking the files
+against PyPI.
 
 ```console
 # GitHub build-provenance attestation
-gh attestation verify glyphguard-0.1.3-py3-none-any.whl --repo NicPWNs/GlyphGuard
+gh attestation verify glyphguard-0.2.0-py3-none-any.whl --repo NicPWNs/GlyphGuard
 
 # Sigstore signature (the .sigstore.json file attached to the GitHub Release)
 python -m pip install sigstore
-python -m sigstore verify github glyphguard-0.1.3-py3-none-any.whl \
-  --bundle glyphguard-0.1.3-py3-none-any.whl.sigstore.json --repository NicPWNs/GlyphGuard
+python -m sigstore verify github glyphguard-0.2.0-py3-none-any.whl \
+  --bundle glyphguard-0.2.0-py3-none-any.whl.sigstore.json --repository NicPWNs/GlyphGuard
 
 # SLSA level 3 provenance (the .intoto.jsonl file attached to the GitHub Release)
-slsa-verifier verify-artifact glyphguard-0.1.3-py3-none-any.whl \
-  --provenance-path glyphguard-0.1.3.intoto.jsonl \
-  --source-uri github.com/NicPWNs/GlyphGuard --source-tag v0.1.3
+slsa-verifier verify-artifact glyphguard-0.2.0-py3-none-any.whl \
+  --provenance-path glyphguard-0.2.0.intoto.jsonl \
+  --source-uri github.com/NicPWNs/GlyphGuard --source-branch main
 ```
+
+Releases are cut from `main` with the Release workflow, so the provenance and signing
+certificates record `refs/heads/main` and the exact commit, not the tag: use
+`--source-branch main` as above, not `--source-tag`. The release tag points to that same
+commit, which `git rev-parse v0.2.0^{commit}` shows.
