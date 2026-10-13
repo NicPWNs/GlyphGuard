@@ -8,6 +8,9 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ### Changed
 
+- A much shorter README. Recipes, the full CLI and Python reference, CI setup,
+  sanitization profiles and performance moved to [docs/guide.md](docs/guide.md), whose
+  examples run in the test suite like the README's.
 - A shorter repository root. The fuzz target moved to `tests/fuzz/`, where it is now
   type-checked, and the hash-pinned CI tool locks moved to `.github/requirements/`.
 
