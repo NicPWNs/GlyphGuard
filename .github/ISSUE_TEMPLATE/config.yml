@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/NicPWNs/GlyphGuard/security/advisories/new
+    about: Sanitizer or detection bypasses that affect deployed systems. Please report these privately.

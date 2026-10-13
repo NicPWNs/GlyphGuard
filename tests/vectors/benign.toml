@@ -1,0 +1,130 @@
+# Legitimate text that must not produce findings at or above `low`.
+# Every new detector rule must keep this corpus clean.
+
+[[sample]]
+name = "ASCII prose"
+text = "The quick brown fox jumps over the lazy dog.\n\tIndented line\r\n"
+
+[[sample]]
+name = "emoji ZWJ family"
+text = "\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466"
+
+[[sample]]
+name = "emoji with skin tone in ZWJ sequence"
+text = "\U0001F469\U0001F3FD\u200D\U0001F4BB"
+
+[[sample]]
+name = "hair component"
+text = "\U0001F9D1\u200D\U0001F9B0"
+
+[[sample]]
+name = "rainbow flag"
+text = "\U0001F3F3\uFE0F\u200D\U0001F308"
+
+[[sample]]
+name = "eye in speech bubble"
+text = "\U0001F441\uFE0F\u200D\U0001F5E8\uFE0F"
+
+[[sample]]
+name = "Scotland subdivision flag"
+text = "\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F"
+
+[[sample]]
+name = "Wales subdivision flag"
+text = "\U0001F3F4\U000E0067\U000E0062\U000E0077\U000E006C\U000E0073\U000E007F"
+
+[[sample]]
+name = "country flag"
+text = "\U0001F1FA\U0001F1F8 \U0001F1EF\U0001F1F5"
+
+[[sample]]
+name = "keycaps"
+text = "1\uFE0F\u20E3 #\uFE0F\u20E3 *\uFE0F\u20E3"
+
+[[sample]]
+name = "emoji and text presentation"
+text = "\u2764\uFE0F \u263A\uFE0E \u2603\uFE0F"
+
+[[sample]]
+name = "skin tone modifier"
+text = "\U0001F44D\U0001F3FD\U0001F44B\U0001F3FF"
+
+[[sample]]
+name = "Persian with ZWNJ"
+text = "\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645 \u06A9\u062A\u0627\u0628\u200C\u0647\u0627"
+
+[[sample]]
+name = "Hindi with ZWJ and ZWNJ"
+text = "\u0915\u094D\u200D\u0937 \u0915\u094D\u200C\u0937 \u0928\u092E\u0938\u094D\u0924\u0947"
+
+[[sample]]
+name = "Malayalam chillu via ZWJ"
+text = "\u0D28\u0D4D\u200D"
+
+[[sample]]
+name = "Arabic"
+text = "\u0645\u0631\u062D\u0628\u0627 \u0628\u0627\u0644\u0639\u0627\u0644\u0645"
+
+[[sample]]
+name = "Arabic Quranic marks"
+text = "\u0628\u0650\u0633\u0652\u0645\u0650 \u0671\u0644\u0644\u0651\u064E\u0647\u0650"
+
+[[sample]]
+name = "Hebrew with points and cantillation"
+text = "\u05D1\u05BC\u05B0\u05E8\u05B5\u05D0\u05E9\u05B4\u0596\u05D9\u05EA"
+
+[[sample]]
+name = "Vietnamese"
+text = "Ti\u1EBFng Vi\u1EC7t c\u00F3 d\u1EA5u"
+
+[[sample]]
+name = "decomposed Vietnamese"
+text = "Vie\u0323\u0302t"
+
+[[sample]]
+name = "Tibetan stacks"
+text = "\u0F56\u0F66\u0F92\u0FB2\u0F74\u0F56\u0F66 \u0F67\u0F71\u0F74\u0F83"
+
+[[sample]]
+name = "Thai"
+text = "\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22 \u0E19\u0E49\u0E33"
+
+[[sample]]
+name = "Korean"
+text = "\uD55C\uAD6D\uC5B4 \uC548\uB155\uD558\uC138\uC694"
+
+[[sample]]
+name = "Old Hangul jamo with filler"
+text = "\u115F\u1161"
+
+[[sample]]
+name = "Japanese with an ideographic variation sequence"
+text = "\u845B\U000E0100\u57CE\u5E02 \u65E5\u672C\u8A9E\u3067\u3059"
+
+[[sample]]
+name = "Chinese"
+text = "\u4F60\u597D\uFF0C\u4E16\u754C\u3002"
+
+[[sample]]
+name = "Cyrillic"
+text = "\u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440"
+
+[[sample]]
+name = "Greek with tonos"
+text = "\u039A\u03B1\u03BB\u03B7\u03BC\u03AD\u03C1\u03B1"
+
+[[sample]]
+name = "French typography"
+text = "\u00AB\u00A0Bonjour\u00A0\u00BB \u2014 10\u202F000\u00A0\u20AC"
+
+[[sample]]
+name = "IPA with combining diacritics"
+text = "[t\u02B0\u0254\u0303\u02D0\u0330]"
+
+[[sample]]
+name = "math symbols"
+text = "\u2200x \u2208 \u211D: x\u00B2 \u2265 0"
+
+[[sample]]
+name = "Devanagari Vedic accents"
+text = "\u0905\u0951\u0917\u094D\u0928\u093F\u0952"

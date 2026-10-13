@@ -1,0 +1,41 @@
+name: Missed attack (false negative)
+description: Text that hides something GlyphGuard didn't catch or didn't clean.
+labels: ["false-negative"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! If this bypass affects a deployed system, please use **Security > Report a vulnerability** instead.
+
+        **Never paste raw hidden characters.** Paste escaped code points, for example the output of
+        `python -c "print(ascii(open('sample.txt', encoding='utf-8').read()))"`.
+  - type: textarea
+    id: input
+    attributes:
+      label: Input (escaped)
+      placeholder: "'Hello\\U000e0049\\U000e0067...'"
+    validations:
+      required: true
+  - type: textarea
+    id: hides
+    attributes:
+      label: What does it hide or do?
+      description: What a person sees versus what a model, filter or parser receives.
+    validations:
+      required: true
+  - type: input
+    id: call
+    attributes:
+      label: API call or command
+      placeholder: glyphguard sanitize -p llm-input
+  - type: textarea
+    id: actual
+    attributes:
+      label: What GlyphGuard reported
+      description: Paste `glyphguard inspect --format json` output if you can.
+      render: json
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: glyphguard --version

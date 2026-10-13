@@ -1,0 +1,29 @@
+name: Bug report
+description: A crash, wrong output, or anything else that's broken.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the command or code, with any non-ASCII input written as escapes.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or output
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version and platform
+      placeholder: "glyphguard 0.1.0.dev0 (Unicode 18.0.0), Python 3.13, Ubuntu 24.04"
+    validations:
+      required: true

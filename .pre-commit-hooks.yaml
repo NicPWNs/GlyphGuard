@@ -1,0 +1,6 @@
+- id: glyphguard
+  name: glyphguard
+  description: Block hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes).
+  entry: glyphguard detect
+  language: python
+  types: [text]

@@ -1,0 +1,36 @@
+name: False positive
+description: Legitimate text that GlyphGuard flags or damages.
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Real text in every script should stay clean, so these reports matter. Paste the input
+        as escaped code points, for example the output of
+        `python -c "print(ascii(open('sample.txt', encoding='utf-8').read()))"`.
+  - type: textarea
+    id: input
+    attributes:
+      label: Input (escaped)
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language, script or context
+      placeholder: "Persian text with ZWNJ, emoji sequence, mathematical notation..."
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Findings or sanitized output
+      description: Paste `glyphguard inspect --format json` output if you can.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: glyphguard --version

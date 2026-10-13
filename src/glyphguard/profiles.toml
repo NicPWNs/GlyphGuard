@@ -1,0 +1,73 @@
+# Sanitization profiles.
+#
+# Each profile maps techniques to actions. Keys may be a technique ID (most specific), a
+# family name, or "default". Actions:
+#
+#   keep     leave the characters alone
+#   remove   delete them
+#   replace  replace the whole span with U+FFFD REPLACEMENT CHARACTER
+#   space    replace the whole span with one ASCII space
+#   newline  replace the whole span with one "\n"
+#   escape   replace each code point with a visible <U+XXXX> marker
+#   trim     (GG-MARK-001 only) keep the first `keep_marks` marks of a stack, drop the rest
+#
+# GG-INV-005 (text renders blank) describes the whole string and is never edited.
+
+[profile.llm-input]
+description = "Text going into a language model or classifier: strip every smuggling channel, keep native scripts and emoji."
+keep_marks = 2
+[profile.llm-input.actions]
+default = "keep"
+INV = "remove"
+SMUG = "remove"
+BIDI = "remove"
+CTRL = "remove"
+"GG-INV-006" = "space"
+"GG-INV-008" = "keep"
+"GG-INV-009" = "keep"
+"GG-INV-010" = "replace"
+"GG-BIDI-004" = "keep"
+"GG-CTRL-004" = "newline"
+"GG-MARK-001" = "trim"
+"GG-MARK-002" = "remove"
+
+[profile.llm-output]
+description = "Model output headed for a UI, terminal or log: also drop private-use and unassigned characters."
+keep_marks = 2
+[profile.llm-output.actions]
+default = "keep"
+INV = "remove"
+SMUG = "remove"
+BIDI = "remove"
+CTRL = "remove"
+"GG-INV-006" = "space"
+"GG-INV-010" = "replace"
+"GG-BIDI-004" = "keep"
+"GG-CTRL-004" = "newline"
+"GG-MARK-001" = "trim"
+"GG-MARK-002" = "remove"
+
+[profile.display-name]
+description = "Usernames, display names and titles: nothing invisible, no reordering, no stacked marks."
+keep_marks = 2
+[profile.display-name.actions]
+default = "remove"
+"GG-INV-006" = "space"
+"GG-INV-010" = "replace"
+"GG-CTRL-004" = "space"
+"GG-MARK-001" = "trim"
+
+[profile.strict]
+description = "Remove everything GlyphGuard flags."
+keep_marks = 2
+[profile.strict.actions]
+default = "remove"
+"GG-INV-006" = "space"
+"GG-CTRL-004" = "newline"
+"GG-MARK-001" = "trim"
+
+[profile.reveal]
+description = "Make hidden characters visible as <U+XXXX> markers, for logs, reviews and terminals."
+keep_marks = 2
+[profile.reveal.actions]
+default = "escape"

@@ -1,0 +1,337 @@
+# GlyphGuard technique catalog.
+#
+# Every detector, sanitizer action and (future) red-team mutator is keyed by these IDs.
+# IDs are stable: never renumber or reuse one. Retire a technique with `deprecated = true`.
+#
+# Fields:
+#   id         GG-<FAMILY>-<NNN>
+#   family     INV | SMUG | BIDI | CTRL | MARK  (CONF, OBF, NORM arrive in later releases)
+#   slug       short kebab-case name, also accepted wherever an ID is
+#   title      human-readable name
+#   severity   default severity: info | low | medium | high | critical
+#   summary    what it is and why it matters
+#   cwe        related CWE identifiers
+#   atlas      related MITRE ATLAS technique identifiers
+#   references supporting material
+
+[[technique]]
+id = "GG-INV-001"
+family = "INV"
+slug = "zero-width"
+title = "Zero-width character"
+severity = "medium"
+summary = """Zero-width space, joiners, word joiner or an inner byte-order mark. They render as \
+nothing, so they split keywords past filters and tokenizers while the text looks unchanged. \
+Legitimate joiners inside emoji sequences and joining scripts (Arabic, Persian, Indic) are not \
+reported."""
+cwe = ["CWE-176"]
+atlas = ["AML.T0051"]
+references = [
+  "https://www.unicode.org/reports/tr36/",
+  "https://www.microsoft.com/en-us/security/blog/2026/09/03/ascii-smuggling/",
+]
+
+[[technique]]
+id = "GG-INV-002"
+family = "INV"
+slug = "invisible-operator"
+title = "Invisible mathematical operator"
+severity = "medium"
+summary = """Function application, invisible times, separator or plus (U+2061..U+2064). Meant \
+for math markup, they are invisible in ordinary text and are used as covert bits."""
+cwe = ["CWE-176"]
+atlas = ["AML.T0051"]
+references = ["https://www.unicode.org/reports/tr25/"]
+
+[[technique]]
+id = "GG-INV-003"
+family = "INV"
+slug = "default-ignorable"
+title = "Other default-ignorable character"
+severity = "low"
+summary = """A Default_Ignorable_Code_Point not covered by a more specific technique, such as a \
+soft hyphen, combining grapheme joiner or reserved ignorable code point. Renderers hide these."""
+cwe = ["CWE-176"]
+atlas = []
+references = ["https://www.unicode.org/reports/tr44/#Default_Ignorable_Code_Point"]
+
+[[technique]]
+id = "GG-INV-004"
+family = "INV"
+slug = "blank-glyph"
+title = "Blank-rendering character"
+severity = "medium"
+summary = """Hangul fillers and the blank Braille pattern are letters or symbols, not whitespace, \
+yet draw nothing. They pass "is not empty" checks and are used to create blank or padded names."""
+cwe = ["CWE-451"]
+atlas = []
+references = ["https://www.unicode.org/charts/PDF/U3130.pdf"]
+
+[[technique]]
+id = "GG-INV-005"
+family = "INV"
+slug = "blank-text"
+title = "Text renders blank"
+severity = "medium"
+summary = """The whole string is non-empty but every character is invisible, blank-rendering or \
+whitespace, so it displays as nothing."""
+cwe = ["CWE-451"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-INV-006"
+family = "INV"
+slug = "unusual-whitespace"
+title = "Unusual whitespace"
+severity = "low"
+summary = """Whitespace other than ASCII space, tab and newlines: em/en/thin spaces, ideographic \
+space, Ogham space mark. These defeat naive tokenizing and word-matching. No-break spaces are \
+reported at info level because typography uses them legitimately."""
+cwe = ["CWE-176"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-INV-007"
+family = "INV"
+slug = "noncharacter"
+title = "Noncharacter code point"
+severity = "medium"
+summary = """Permanently reserved for internal use (U+FDD0..U+FDEF, U+xxFFFE/U+xxFFFF). They \
+should never appear in interchanged text."""
+cwe = ["CWE-176"]
+atlas = []
+references = ["https://www.unicode.org/faq/private_use.html#noncharacters"]
+
+[[technique]]
+id = "GG-INV-008"
+family = "INV"
+slug = "unassigned"
+title = "Unassigned code point"
+severity = "low"
+summary = """Not assigned in the Unicode version GlyphGuard's data was built from. Renders as a \
+missing-glyph box or nothing, and may be assigned a meaning by a future Unicode version."""
+cwe = ["CWE-176"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-INV-009"
+family = "INV"
+slug = "private-use"
+title = "Private-use character"
+severity = "low"
+summary = """Private Use Area code points have no standard meaning; their appearance depends on \
+the font. Icon fonts use them legitimately, but they also carry hidden payloads."""
+cwe = ["CWE-176"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-INV-010"
+family = "INV"
+slug = "lone-surrogate"
+title = "Lone surrogate"
+severity = "high"
+summary = """A UTF-16 surrogate code point outside a valid pair. It cannot be encoded as UTF-8 \
+and usually means malformed input smuggled through surrogateescape or a lenient decoder."""
+cwe = ["CWE-176"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-SMUG-001"
+family = "SMUG"
+slug = "tag-smuggling"
+title = "Unicode tag smuggling (ASCII smuggling)"
+severity = "high"
+summary = """Characters from the Tags block (U+E0000..U+E007F) mirror ASCII but render as \
+nothing. Language models read them, so they carry invisible prompt injections and exfiltrated \
+data; phishing campaigns use them to split keywords. Valid emoji subdivision flags are not \
+reported."""
+cwe = ["CWE-176", "CWE-451"]
+atlas = ["AML.T0051"]
+references = [
+  "https://embracethered.com/blog/posts/2024/hiding-and-finding-text-with-unicode-tags/",
+  "https://www.microsoft.com/en-us/security/blog/2026/09/03/ascii-smuggling/",
+  "https://www.unicode.org/reports/tr51/#valid-emoji-tag-sequences",
+]
+
+[[technique]]
+id = "GG-SMUG-002"
+family = "SMUG"
+slug = "variation-selector-smuggling"
+title = "Variation selector abuse"
+severity = "high"
+summary = """Variation selectors outside a valid variation sequence, or several in a row. Each of \
+the 256 selectors can encode one byte, so a single emoji can carry an arbitrary hidden payload; \
+invisible selectors are also used as imperceptible jailbreak suffixes and to hide malware."""
+cwe = ["CWE-176", "CWE-451"]
+atlas = ["AML.T0051", "AML.T0054"]
+references = [
+  "https://paulbutler.org/2025/smuggling-arbitrary-data-through-an-emoji/",
+  "https://arxiv.org/abs/2510.05025",
+  "https://arxiv.org/abs/2504.11168",
+]
+
+[[technique]]
+id = "GG-SMUG-003"
+family = "SMUG"
+slug = "invisible-binary"
+title = "Invisible binary encoding"
+severity = "high"
+summary = """A long run of invisible characters drawn from a small alphabet, the signature of \
+zero-width steganography that encodes data as bits."""
+cwe = ["CWE-176"]
+atlas = ["AML.T0051"]
+references = ["https://arxiv.org/abs/2106.09898"]
+
+[[technique]]
+id = "GG-SMUG-004"
+family = "SMUG"
+slug = "private-use-run"
+title = "Private-use payload"
+severity = "high"
+summary = """A run of Private Use Area characters, which editors typically show as blank. Used to \
+hide encoded code in source files (GlassWorm)."""
+cwe = ["CWE-176", "CWE-451"]
+atlas = []
+references = ["https://www.endorlabs.com/learn/invisible-threats-glassworm-unicode-vscode"]
+
+[[technique]]
+id = "GG-BIDI-001"
+family = "BIDI"
+slug = "bidi-override"
+title = "Bidirectional override"
+severity = "high"
+summary = """Left-to-right or right-to-left override (U+202D, U+202E). Forces the display order \
+of characters so text renders differently from its logical order (Trojan Source, spoofed file \
+extensions)."""
+cwe = ["CWE-451"]
+atlas = []
+references = ["https://trojansource.codes/", "https://www.unicode.org/reports/tr55/"]
+
+[[technique]]
+id = "GG-BIDI-002"
+family = "BIDI"
+slug = "bidi-embedding"
+title = "Bidirectional embedding or isolate"
+severity = "medium"
+summary = """Embedding, isolate and pop controls (U+202A..U+202C, U+2066..U+2069). They reorder \
+surrounding text and are rarely needed outside rich bidi documents."""
+cwe = ["CWE-451"]
+atlas = []
+references = ["https://www.unicode.org/reports/tr9/"]
+
+[[technique]]
+id = "GG-BIDI-003"
+family = "BIDI"
+slug = "bidi-unbalanced"
+title = "Unterminated bidirectional control"
+severity = "high"
+summary = """An embedding, override or isolate that is still open at the end of a line, so its \
+reordering leaks into following text. This is the core of Trojan Source attacks on code."""
+cwe = ["CWE-451"]
+atlas = []
+references = ["https://trojansource.codes/"]
+
+[[technique]]
+id = "GG-BIDI-004"
+family = "BIDI"
+slug = "bidi-mark"
+title = "Bidirectional mark"
+severity = "low"
+summary = """Left-to-right, right-to-left or Arabic letter mark. Invisible; normal in \
+right-to-left text, suspicious elsewhere."""
+cwe = ["CWE-451"]
+atlas = []
+references = ["https://www.unicode.org/reports/tr9/"]
+
+[[technique]]
+id = "GG-CTRL-001"
+family = "CTRL"
+slug = "c0-control"
+title = "C0 control character"
+severity = "medium"
+summary = """ASCII control characters other than tab and newlines. Backspace and delete can \
+visually erase preceding text in terminals and some renderers (deletion attacks); NUL truncates \
+strings in C-based consumers."""
+cwe = ["CWE-150"]
+atlas = []
+references = ["https://arxiv.org/abs/2106.09898"]
+
+[[technique]]
+id = "GG-CTRL-002"
+family = "CTRL"
+slug = "c1-control"
+title = "C1 control character"
+severity = "high"
+summary = """Control characters U+0080..U+009F. Some terminals interpret them as escape \
+introducers; they almost always indicate mis-decoded or malicious input."""
+cwe = ["CWE-150"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-CTRL-003"
+family = "CTRL"
+slug = "terminal-escape"
+title = "Terminal escape sequence"
+severity = "high"
+summary = """ANSI/ECMA-48 escape sequences (CSI, OSC, DCS...). In model output or logs printed to a \
+terminal they can hide or rewrite text, create disguised hyperlinks (OSC 8) or write the \
+clipboard (OSC 52)."""
+cwe = ["CWE-150", "CWE-117"]
+atlas = ["AML.T0051"]
+references = [
+  "https://embracethered.com/blog/posts/2024/terminal-dillmas-prompt-injection-ansi-sequences/",
+]
+
+[[technique]]
+id = "GG-CTRL-004"
+family = "CTRL"
+slug = "line-separator"
+title = "Unicode line or paragraph separator"
+severity = "medium"
+summary = """U+2028, U+2029 and NEL (U+0085). Many parsers treat them as line breaks while \
+others do not, enabling log injection and breaking out of single-line contexts."""
+cwe = ["CWE-117", "CWE-93"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-MARK-001"
+family = "MARK"
+slug = "excessive-marks"
+title = "Excessive combining marks (Zalgo)"
+severity = "medium"
+summary = """A base character carrying an unusually long stack of combining marks. It disrupts \
+layout and perturbs tokenizers, classifiers and OCR while the base letters stay readable."""
+cwe = ["CWE-176"]
+atlas = []
+references = ["https://arxiv.org/abs/2306.07033"]
+
+[[technique]]
+id = "GG-MARK-002"
+family = "MARK"
+slug = "overlay-mark"
+title = "Overlay combining mark"
+severity = "medium"
+summary = """Marks drawn through their base, such as a combining stroke or solidus overlay. They \
+change the code points of a word while leaving it legible, defeating keyword filters."""
+cwe = ["CWE-1007"]
+atlas = []
+references = []
+
+[[technique]]
+id = "GG-MARK-003"
+family = "MARK"
+slug = "orphan-mark"
+title = "Orphaned combining mark"
+severity = "low"
+summary = """A combining mark at the start of the text or after whitespace or a control, where \
+it has no meaningful base. It renders on a dotted circle or attaches to unexpected neighbors."""
+cwe = ["CWE-176"]
+atlas = []
+references = []
