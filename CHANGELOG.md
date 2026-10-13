@@ -8,6 +8,11 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ### Changed
 
+- Package and Marketplace metadata for search:
+  - The PyPI summary says what GlyphGuard does.
+  - More keywords and classifiers.
+  - Documentation, repository and GitHub Action links.
+  - A Marketplace description that fits the listing.
 - A much shorter README. Recipes, the full CLI and Python reference, CI setup,
   sanitization profiles and performance moved to [docs/guide.md](docs/guide.md), whose
   examples run in the test suite like the README's.
