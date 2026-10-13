@@ -70,11 +70,14 @@ AGENT_CONFIG_FILES: tuple[tuple[str, str], ...] = (
 )
 
 AGENT_NOTE = "in a file AI agents read as instructions"
+_BACKSLASH = chr(92)
 
 
 def agent_config_kind(path: str) -> str | None:
     """What kind of agent instruction file ``path`` is, or None if it isn't one."""
-    parts = [p for p in PurePath(path).as_posix().split("/") if p not in ("", ".")]
+    # Backslashes count as separators on every OS: Windows paths reach us in file lists.
+    normalized = PurePath(path).as_posix().replace(_BACKSLASH, "/")
+    parts = [p for p in normalized.split("/") if p not in ("", ".")]
     if not parts:
         return None
     suffixes = ["/".join(parts[i:]) for i in range(len(parts))]
