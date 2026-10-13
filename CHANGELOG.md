@@ -6,6 +6,8 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
 ### Added
 
 - `glyphguard scan`: scans a repository (git's tracked and untracked, non-ignored files
@@ -16,6 +18,16 @@ All notable changes to GlyphGuard are documented here. The format follows
   there says which kind of file it is in. `--agents-only` and `--list-agent-files` are
   also available, as is the `glyphguard.scan` module (`agent_config_kind`, `escalate`,
   `scan_text`).
+- `glyphguard mcp pin` and `glyphguard mcp check` catch MCP tool poisoning and rug
+  pulls.
+  - Every string in every tool definition (descriptions, parameter names and
+    descriptions, enums) is scanned, and findings are escalated as agent instructions.
+  - `pin` records the definitions in `glyphguard-mcp.lock` and refuses tools with
+    hidden text unless given `--force`.
+  - `check` fails when a tool is added, removed or changed, and shows the fields before
+    and after.
+  - GlyphGuard never starts servers: it reads each server's `tools/list` result as JSON.
+  - Library: `glyphguard.mcp`.
 - `scan` decodes Unicode escape sequences in JSON files and reports what they hide. An
   MCP tool description can carry tag smuggling as plain-ASCII escapes that a raw scan
   can't see. Findings point at the escapes in the file. `--escapes all` extends this to
@@ -134,7 +146,8 @@ First release: the detection, decoding and sanitization core.
 - Conformance vectors, a multilingual benign corpus, property-based tests, and a
   repo-hygiene test that runs GlyphGuard on its own sources.
 
-[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.2.0
 [0.1.2]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.2
 [0.1.1]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.1

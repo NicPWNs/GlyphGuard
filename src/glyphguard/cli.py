@@ -1,5 +1,5 @@
 """Command-line interface: ``glyphguard inspect | detect | scan | sanitize | check | skeleton |
-confusable | url | catalog``."""
+confusable | url | mcp | catalog``."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path, PurePath
 from typing import Any, TextIO
 
 import glyphguard
-from glyphguard import ucd
+from glyphguard import mcp, ucd
 from glyphguard.catalog import Severity, techniques
 from glyphguard.confusables import is_confusable, restriction_level, skeleton
 from glyphguard.detect import detect
@@ -467,6 +467,90 @@ def cmd_url(args: argparse.Namespace, out: _Out) -> int:
     return EXIT_FINDINGS if deceptive else EXIT_OK
 
 
+# --- mcp ----------------------------------------------------------------------------
+
+
+def _load_servers(specs: list[str]) -> dict[str, list[mcp.Tool]]:
+    """``NAME=FILE`` or ``FILE`` (named after the file: github.tools.json -> github)."""
+    servers: dict[str, list[mcp.Tool]] = {}
+    for spec in specs:
+        name, sep, path = spec.partition("=")
+        if not sep:
+            path = spec
+            name = Path(spec).name.removesuffix(".json").removesuffix(".tools")
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        try:
+            servers[name] = mcp.load_tools(data)
+        except ValueError as exc:
+            raise ValueError(f"{path}: {exc}") from None
+    return servers
+
+
+def _print_tool_findings(out: _Out, findings: list[mcp.ToolFinding]) -> None:
+    for tf in findings:
+        f = tf.finding
+        level = out.style(str(f.severity), _COLORS[f.severity])
+        where = f"{tf.server}/{_escape_all(tf.tool)} {_escape_all(tf.path)}"
+        out(f"{where}: {level} {f.technique_id} {f.technique.title}: {f.message}")
+
+
+def cmd_mcp_pin(args: argparse.Namespace, out: _Out) -> int:
+    servers = _load_servers(args.servers)
+    findings = [tf for name, tools in servers.items() for tf in mcp.scan_tools(name, tools)]
+    _print_tool_findings(out, findings)
+    worst = mcp.worst(findings)
+    if worst is not None and worst >= Severity.parse(args.fail_on) and not args.force:
+        print(
+            "glyphguard: not pinning tools with hidden text; review them, or use --force",
+            file=sys.stderr,
+        )
+        return EXIT_FINDINGS
+    lock_path = Path(args.lock)
+    existing = json.loads(lock_path.read_text(encoding="utf-8")) if lock_path.exists() else None
+    lock = mcp.pin(servers, existing)
+    lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    count = sum(len(tools) for tools in servers.values())
+    noun = "server" if len(servers) == 1 else "servers"
+    out(f"pinned {count} tools from {len(servers)} {noun} in {lock_path}")
+    return EXIT_OK
+
+
+def cmd_mcp_check(args: argparse.Namespace, out: _Out) -> int:
+    servers = _load_servers(args.servers)
+    findings = [tf for name, tools in servers.items() for tf in mcp.scan_tools(name, tools)]
+    changes: list[mcp.Change] = []
+    lock_path = Path(args.lock)
+    if lock_path.exists():
+        changes = mcp.compare(json.loads(lock_path.read_text(encoding="utf-8")), servers)
+    elif args.lock != mcp.DEFAULT_LOCK:
+        raise ValueError(f"lock file {args.lock} not found")
+    if args.format == "json":
+        report = {
+            "changes": [c.to_dict() for c in changes],
+            "findings": [tf.to_dict() for tf in findings],
+        }
+        out(json.dumps(report, indent=2))
+    else:
+        for c in changes:
+            fields = f" ({', '.join(c.fields)})" if c.fields else ""
+            out(f"{c.server}/{_escape_all(c.tool)}: {out.style(c.kind, '33')}{fields}")
+            for field in c.fields:
+                for label, side in (("was", c.before), ("now", c.after)):
+                    value = (side or {}).get(field, "(absent)")
+                    shown = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+                    if len(shown) > 160:
+                        shown = shown[:157] + "..."
+                    out(f"    {field} {label}: {_escape_all(shown, keep_spaces=True)}")
+        _print_tool_findings(out, findings)
+        if not lock_path.exists():
+            print(
+                f"glyphguard: no {lock_path}; only scanned (run 'mcp pin' to pin)", file=sys.stderr
+            )
+    worst = mcp.worst(findings)
+    failed = bool(changes) or (worst is not None and worst >= Severity.parse(args.fail_on))
+    return EXIT_FINDINGS if failed else EXIT_OK
+
+
 # --- catalog ------------------------------------------------------------------------
 
 
@@ -683,6 +767,38 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-e", "--unescape", action="store_true", help="interpret escapes in URLs")
     p.add_argument("--format", choices=("text", "json"), default="text")
     p.set_defaults(func=cmd_url)
+
+    p = sub.add_parser(
+        "mcp",
+        help="scan MCP tool definitions for hidden text and pin them against rug pulls",
+        description=(
+            "Scan MCP tool definitions and pin them in a lock file. GlyphGuard never starts "
+            "servers: pass each server's tools/list result as JSON, e.g. from "
+            "'npx @modelcontextprotocol/inspector --cli <server command> --method tools/list'. "
+            "Name servers with NAME=FILE, or let FILE's name (github.tools.json -> github) "
+            "name them."
+        ),
+    )
+    mcp_sub = p.add_subparsers(dest="mcp_command", required=True)
+    for name, func, text in (
+        ("pin", cmd_mcp_pin, "record tool definitions in the lock file (refuses hidden text)"),
+        ("check", cmd_mcp_check, "report changes since pinning and hidden text; exit 1 if any"),
+    ):
+        q = mcp_sub.add_parser(name, help=text, description=text)
+        q.add_argument("servers", nargs="+", metavar="[NAME=]FILE", help="tools/list JSON")
+        q.add_argument(
+            "--lock", default=mcp.DEFAULT_LOCK, help=f"lock file (default: {mcp.DEFAULT_LOCK})"
+        )
+        q.add_argument(
+            "--fail-on",
+            default="medium",
+            help="severity of hidden text that fails (default: medium)",
+        )
+        if name == "pin":
+            q.add_argument("--force", action="store_true", help="pin even if hidden text is found")
+        else:
+            q.add_argument("--format", choices=("text", "json"), default="text")
+        q.set_defaults(func=func)
 
     p = sub.add_parser("catalog", help="list techniques and profiles")
     p.add_argument("--format", choices=("text", "json"), default="text")

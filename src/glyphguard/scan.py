@@ -91,7 +91,9 @@ def agent_config_kind(path: str) -> str | None:
     return None
 
 
-def escalate(findings: Iterable[Finding], kind: str | None) -> list[Finding]:
+def escalate(
+    findings: Iterable[Finding], kind: str | None, *, note: str = AGENT_NOTE
+) -> list[Finding]:
     """Raise medium findings to high in agent instruction files, noting why.
 
     Hidden or deceptive characters in a file an agent obeys are prompt injection, not
@@ -101,9 +103,9 @@ def escalate(findings: Iterable[Finding], kind: str | None) -> list[Finding]:
     if kind is None:
         return list(findings)
     return [
-        replace(f, severity=Severity.HIGH, message=f"{f.message} ({AGENT_NOTE}: {kind})")
+        replace(f, severity=Severity.HIGH, message=f"{f.message} ({note}: {kind})")
         if f.severity == Severity.MEDIUM
-        else replace(f, message=f"{f.message} ({AGENT_NOTE}: {kind})")
+        else replace(f, message=f"{f.message} ({note}: {kind})")
         if f.severity >= Severity.HIGH
         else f
         for f in findings
