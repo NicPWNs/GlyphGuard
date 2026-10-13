@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def load_harness() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
-        "fuzz_glyphguard", ROOT / "fuzz" / "fuzz_glyphguard.py"
+        "fuzz_glyphguard", ROOT / "tests" / "fuzz" / "fuzz_glyphguard.py"
     )
     assert spec is not None
     assert spec.loader is not None

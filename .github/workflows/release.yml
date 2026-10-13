@@ -105,7 +105,7 @@ jobs:
         run: |
           mkdir -p notes
           python scripts/release_notes.py "$VERSION" > notes/release-notes.md
-      - run: python -m pip install --require-hashes -r requirements/build.txt
+      - run: python -m pip install --require-hashes -r .github/requirements/build.txt
       - run: python -m build
       - name: Check the built version matches the tag
         env:
@@ -118,7 +118,7 @@ jobs:
       - run: python -m twine check --strict dist/*
       - name: Test the built wheel
         run: |
-          python -m pip install --require-hashes -r requirements/test.txt
+          python -m pip install --require-hashes -r .github/requirements/test.txt
           python -m pip install --no-deps dist/*.whl
           python -m pytest tests -o addopts="--strict-markers"
       - name: Hash the built files for SLSA provenance

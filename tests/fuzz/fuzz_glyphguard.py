@@ -4,7 +4,7 @@ Feeds arbitrary Unicode text to detection, sanitization, reveal, SARIF output, p
 term matching, skeletons, hostname checks, escape decoding and MCP tool scans, and checks
 the invariants the rest of the toolkit relies on. Any exception is a finding.
 
-Run locally (Linux or macOS): pip install atheris && python fuzz/fuzz_glyphguard.py
+Run locally (Linux or macOS): pip install atheris && python tests/fuzz/fuzz_glyphguard.py
 """
 
 from __future__ import annotations

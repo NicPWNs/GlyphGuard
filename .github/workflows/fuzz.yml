@@ -1,7 +1,7 @@
 name: Fuzzing
 
 # Coverage-guided fuzzing of detection and sanitization with ClusterFuzzLite and Atheris
-# (targets in fuzz/). Pull requests get a short run focused on the changed code; a
+# (targets in tests/fuzz/). Pull requests get a short run focused on the changed code; a
 # longer batch run happens weekly and on demand.
 
 on:

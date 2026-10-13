@@ -100,3 +100,7 @@ strict = true
 python_version = "3.11"
 files = ["src", "tests", "scripts"]
 exclude = ['scripts/make_brand\.py']  # optional brand tooling (fonttools, resvg-py)
+
+[[tool.mypy.overrides]]
+module = ["atheris"]  # the fuzz target's engine, only installed in the fuzzing image
+ignore_missing_imports = true

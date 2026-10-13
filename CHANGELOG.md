@@ -6,6 +6,11 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A shorter repository root. The fuzz target moved to `tests/fuzz/`, where it is now
+  type-checked, and the hash-pinned CI tool locks moved to `.github/requirements/`.
+
 ## [0.3.0] - 2026-10-13
 
 ### Added

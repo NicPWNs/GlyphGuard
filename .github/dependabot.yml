@@ -23,9 +23,9 @@ updates:
     commit-message:
       prefix: ci
 
-  # Keeps the hash-pinned CI tool locks in requirements/ current.
+  # Keeps the hash-pinned CI tool locks in .github/requirements/ current.
   - package-ecosystem: pip
-    directory: /requirements
+    directory: /.github/requirements
     schedule:
       interval: weekly
     cooldown:
