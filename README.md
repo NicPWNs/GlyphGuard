@@ -20,6 +20,9 @@
   <img alt="Unicode 18.0" src="https://img.shields.io/badge/unicode-18.0-3ddc84">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-3ddc84">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+  <br>
+  <a href="https://www.bestpractices.dev/projects/15450"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/15450/badge"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/NicPWNs/GlyphGuard"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/NicPWNs/GlyphGuard/badge"></a>
 </p>
 
 ---
