@@ -1,4 +1,4 @@
-"""Command-line interface: ``glyphguard inspect | detect | sanitize | check | skeleton |
+"""Command-line interface: ``glyphguard inspect | detect | scan | sanitize | check | skeleton |
 confusable | catalog``."""
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import os
 import re
 import sys
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path, PurePath
 from typing import Any, TextIO
 
@@ -24,6 +24,7 @@ from glyphguard.guard import MODES, Guard, canonicalize
 from glyphguard.report import inspect
 from glyphguard.sanitize import profiles, reveal, sanitize
 from glyphguard.sarif import Located, to_sarif
+from glyphguard.scan import AGENT_CONFIG_FILES, agent_config_kind, repository_files, scan_text
 
 EXIT_OK, EXIT_FINDINGS, EXIT_ERROR = 0, 1, 2
 
@@ -219,13 +220,9 @@ def _expand_directories(paths: list[str], exclude: Sequence[str] = ()) -> list[s
     return expanded
 
 
-def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
+def _read_sources(args: argparse.Namespace, paths: list[str]) -> list[tuple[str, str]]:
+    """(name, text) for each file in ``paths`` (directories expanded), skipping binaries."""
     sources: list[tuple[str, str]] = []
-    if args.text is not None:
-        sources.append(("<text>", unescape(args.text) if args.unescape else args.text))
-    paths = list(args.paths)
-    if args.files0_from is not None:
-        paths += _paths_from(args.files0_from)
     for path in _expand_directories(paths, args.exclude or ()):
         if path == "-":
             sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
@@ -236,17 +233,70 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
                     print(f"glyphguard: skipping binary file {path}", file=sys.stderr)
                 continue
             sources.append((path, data.decode("utf-8", errors="surrogateescape")))
+    return sources
+
+
+def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
+    sources: list[tuple[str, str]] = []
+    if args.text is not None:
+        sources.append(("<text>", unescape(args.text) if args.unescape else args.text))
+    paths = list(args.paths)
+    if args.files0_from is not None:
+        paths += _paths_from(args.files0_from)
+    sources += _read_sources(args, paths)
     if args.text is None and not args.paths and args.files0_from is None:
         sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
 
+    def analyze(name: str, text: str) -> list[Finding]:
+        return detect(text, techniques=args.technique or None, min_severity=args.min_severity)
+
+    return _report(args, out, sources, analyze)
+
+
+def cmd_scan(args: argparse.Namespace, out: _Out) -> int:
+    if args.list_agent_files:
+        for pattern, kind in AGENT_CONFIG_FILES:
+            out(f"{pattern:<34} {kind}")
+        return EXIT_OK
+    paths = list(args.paths)
+    if args.files0_from is not None:
+        paths += _paths_from(args.files0_from)
+    if not paths:
+        tracked = repository_files()
+        paths = tracked if tracked is not None else ["."]
+    sources = _read_sources(args, paths)
+    agent_files = {name for name, _ in sources if agent_config_kind(name) is not None}
+    if args.agents_only:
+        sources = [(name, text) for name, text in sources if name in agent_files]
+
+    def analyze(name: str, text: str) -> list[Finding]:
+        return scan_text(
+            text, name, techniques=args.technique or None, min_severity=args.min_severity
+        )
+
+    code = _report(args, out, sources, analyze)
+    if args.format == "text":
+        noun = "file" if len(sources) == 1 else "files"
+        summary = f"Scanned {len(sources)} {noun}"
+        if agent_files:
+            summary += f", including {len(agent_files)} AI agent instruction files"
+        out.stream.flush()
+        print(summary + ".", file=sys.stderr)
+    return code
+
+
+def _report(
+    args: argparse.Namespace,
+    out: _Out,
+    sources: list[tuple[str, str]],
+    analyze: Callable[[str, str], list[Finding]],
+) -> int:
     fail_on = Severity.parse(args.fail_on)
     worst: Severity | None = None
     records: list[dict[str, Any]] = []
     located: list[Located] = []
     for name, text in sources:
-        findings: list[Finding] = detect(
-            text, techniques=args.technique or None, min_severity=args.min_severity
-        )
+        findings = analyze(name, text)
         for f in findings:
             worst = f.severity if worst is None else max(worst, f.severity)
             line, col = _line_col(text, f.start)
@@ -256,7 +306,10 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
             if args.format == "sarif":
                 continue
             if args.format == "json":
-                records.append({"source": name, "line": line, "column": col, **f.to_dict()})
+                record = {"source": name, "line": line, "column": col, **f.to_dict()}
+                if args.command == "scan":
+                    record["agent_config"] = agent_config_kind(name)
+                records.append(record)
             elif args.format == "github":
                 out(_github_annotation(name, line, col, f, fail_on))
             else:
@@ -440,41 +493,74 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-chars", type=int, default=64)
     p.set_defaults(func=cmd_inspect)
 
+    def add_file_options(p: argparse.ArgumentParser, min_severity: str) -> None:
+        p.add_argument(
+            "--min-severity", default=min_severity, help="hide findings below this severity"
+        )
+        p.add_argument(
+            "--fail-on", default="medium", help="exit 1 if a finding reaches this severity"
+        )
+        p.add_argument(
+            "--technique",
+            action="append",
+            help="only report these IDs, slugs or families (repeatable)",
+        )
+        p.add_argument(
+            "--format",
+            choices=("text", "json", "github", "sarif"),
+            default="text",
+            help="github: inline pull-request annotations; sarif: SARIF 2.1.0 for code scanning",
+        )
+        p.add_argument(
+            "--sarif",
+            metavar="FILE",
+            help="also write a SARIF 2.1.0 log to FILE, whatever --format is",
+        )
+        p.add_argument(
+            "--files0-from",
+            metavar="FILE",
+            help="also scan the NUL-separated paths in FILE ('-' for stdin), e.g. git ls-files -z",
+        )
+        p.add_argument(
+            "--binary", action="store_true", help="also scan files that look binary (contain NUL)"
+        )
+        p.add_argument(
+            "--exclude",
+            action="append",
+            metavar="GLOB",
+            help="skip files and directories matching GLOB, e.g. 'docs/*.md' (repeatable)",
+        )
+
     p = sub.add_parser("detect", help="report findings in text or files; exit 1 at --fail-on")
     p.add_argument("paths", nargs="*", help="files to scan ('-' reads stdin)")
     p.add_argument("-t", "--text", help="scan this text instead of files")
     p.add_argument("-e", "--unescape", action="store_true", help="interpret escapes in --text")
-    p.add_argument("--min-severity", default="info", help="hide findings below this severity")
-    p.add_argument("--fail-on", default="medium", help="exit 1 if a finding reaches this severity")
-    p.add_argument(
-        "--technique", action="append", help="only report these IDs, slugs or families (repeatable)"
-    )
-    p.add_argument(
-        "--format",
-        choices=("text", "json", "github", "sarif"),
-        default="text",
-        help="github: inline pull-request annotations; sarif: SARIF 2.1.0 for code scanning",
-    )
-    p.add_argument(
-        "--sarif",
-        metavar="FILE",
-        help="also write a SARIF 2.1.0 log to FILE, whatever --format is",
-    )
-    p.add_argument(
-        "--files0-from",
-        metavar="FILE",
-        help="also scan the NUL-separated paths in FILE ('-' for stdin), e.g. git ls-files -z",
-    )
-    p.add_argument(
-        "--binary", action="store_true", help="also scan files that look binary (contain NUL)"
-    )
-    p.add_argument(
-        "--exclude",
-        action="append",
-        metavar="GLOB",
-        help="skip files and directories matching GLOB, e.g. 'docs/*.md' (repeatable)",
-    )
+    add_file_options(p, min_severity="info")
     p.set_defaults(func=cmd_detect)
+
+    p = sub.add_parser(
+        "scan",
+        help="scan a repository; hidden text in AI agent instruction files counts as high",
+        description=(
+            "Scan files, directories or (by default) the current git repository. Files that "
+            "AI coding agents read as instructions (AGENTS.md, CLAUDE.md, Cursor and Copilot "
+            "rules, skills, MCP configs...) are judged more strictly: medium findings in them "
+            "become high. See 'glyphguard scan --list-agent-files'."
+        ),
+    )
+    p.add_argument(
+        "paths", nargs="*", help="files or directories (default: the git repository, or '.')"
+    )
+    p.add_argument(
+        "--agents-only", action="store_true", help="scan only AI agent instruction files"
+    )
+    p.add_argument(
+        "--list-agent-files",
+        action="store_true",
+        help="print the file patterns treated as AI agent instructions and exit",
+    )
+    add_file_options(p, min_severity="low")
+    p.set_defaults(func=cmd_scan)
 
     p = sub.add_parser("sanitize", help="neutralize findings and print the cleaned text")
     add_text_input(p)

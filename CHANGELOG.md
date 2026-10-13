@@ -6,6 +6,25 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `glyphguard scan`: scans a repository (git's tracked and untracked, non-ignored files
+  by default, or the files and directories given). It judges AI agent instruction files
+  more strictly: `AGENTS.md`, `CLAUDE.md`, `.claude/`, skills, Gemini, Cursor, Windsurf,
+  Cline, Roo, Copilot, Junie, Kiro, Augment, Continue, OpenHands and Aider files, MCP
+  configs and `llms.txt`. Medium findings in those files become high, and every finding
+  there says which kind of file it is in. `--agents-only` and `--list-agent-files` are
+  also available, as is the `glyphguard.scan` module (`agent_config_kind`, `escalate`,
+  `scan_text`).
+- Conformance vectors modeled on published incidents: the Rules File Backdoor
+  (tag-smuggled and bidi-reordered instructions in rules files) and GlassWorm (JavaScript
+  hidden in variation selectors).
+
+### Changed
+
+- The GitHub Action and the pre-commit hook run `glyphguard scan`, so agent instruction
+  files get the stricter treatment.
+
 ## [0.2.0] - 2026-10-13
 
 ### Security
