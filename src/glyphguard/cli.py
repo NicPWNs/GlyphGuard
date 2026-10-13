@@ -149,11 +149,37 @@ def _line_col(text: str, offset: int) -> tuple[int, int]:
     return line, col
 
 
+def _gh_data(value: str) -> str:
+    """Escape a GitHub Actions workflow-command message."""
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _gh_property(value: str) -> str:
+    """Escape a GitHub Actions workflow-command property value."""
+    return _gh_data(value).replace(":", "%3A").replace(",", "%2C")
+
+
+def _github_annotation(name: str, line: int, col: int, f: Finding, fail_on: Severity) -> str:
+    level = "error" if f.severity >= fail_on else "warning"
+    title = _gh_property(f"{f.technique_id} {f.technique.title} ({f.severity})")
+    where = "" if name.startswith("<") else f"file={_gh_property(name)},line={line},col={col},"
+    return f"::{level} {where}title={title}::{_gh_data(f.message)}"
+
+
+def _paths_from(source: str) -> list[str]:
+    """NUL-separated paths from a file or stdin, as produced by ``git ls-files -z``."""
+    data = sys.stdin.buffer.read() if source == "-" else Path(source).read_bytes()
+    return [os.fsdecode(p) for p in data.split(b"\0") if p]
+
+
 def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
     sources: list[tuple[str, str]] = []
     if args.text is not None:
         sources.append(("<text>", unescape(args.text) if args.unescape else args.text))
-    for path in args.paths:
+    paths = list(args.paths)
+    if args.files0_from is not None:
+        paths += _paths_from(args.files0_from)
+    for path in paths:
         if path == "-":
             sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
         else:
@@ -162,7 +188,7 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
                 print(f"glyphguard: skipping binary file {path}", file=sys.stderr)
                 continue
             sources.append((path, data.decode("utf-8", errors="surrogateescape")))
-    if args.text is None and not args.paths:
+    if args.text is None and not args.paths and args.files0_from is None:
         sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
 
     fail_on = Severity.parse(args.fail_on)
@@ -177,6 +203,8 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
             line, col = _line_col(text, f.start)
             if args.format == "json":
                 records.append({"source": name, "line": line, "column": col, **f.to_dict()})
+            elif args.format == "github":
+                out(_github_annotation(name, line, col, f, fail_on))
             else:
                 level = out.style(str(f.severity), _COLORS[f.severity])
                 out(
@@ -288,7 +316,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--technique", action="append", help="only report these IDs, slugs or families (repeatable)"
     )
-    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.add_argument(
+        "--format",
+        choices=("text", "json", "github"),
+        default="text",
+        help="github: workflow-command annotations that appear inline on pull requests",
+    )
+    p.add_argument(
+        "--files0-from",
+        metavar="FILE",
+        help="also scan the NUL-separated paths in FILE ('-' for stdin), e.g. git ls-files -z",
+    )
     p.add_argument(
         "--binary", action="store_true", help="also scan files that look binary (contain NUL)"
     )

@@ -1,0 +1,57 @@
+name: GlyphGuard
+description: >-
+  Find hidden Unicode in your repository (invisible text, smuggled payloads, bidi
+  overrides, terminal escapes) and annotate it inline on pull requests.
+author: Nic Jones
+branding:
+  icon: eye
+  color: green
+
+inputs:
+  paths:
+    description: >-
+      Files to scan, separated by whitespace. Defaults to every file tracked by git.
+      Binary files are skipped.
+    required: false
+    default: ""
+  fail-on:
+    description: Fail the step when a finding reaches this severity (info, low, medium, high, critical).
+    required: false
+    default: medium
+  min-severity:
+    description: Hide findings below this severity.
+    required: false
+    default: low
+  python-version:
+    description: Python version used to run GlyphGuard (3.11 or later).
+    required: false
+    default: "3.13"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install GlyphGuard
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install --quiet --disable-pip-version-check "$ACTION_PATH"
+
+    - name: Scan for hidden Unicode
+      shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        MIN_SEVERITY: ${{ inputs.min-severity }}
+      run: |
+        set -euo pipefail
+        args=(detect --format github --fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
+        if [[ -n "$PATHS" ]]; then
+          read -r -a files <<< "$PATHS"
+          glyphguard "${args[@]}" -- "${files[@]}"
+        else
+          git ls-files -z | glyphguard "${args[@]}" --files0-from -
+        fi

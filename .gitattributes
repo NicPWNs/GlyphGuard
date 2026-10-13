@@ -1,0 +1,3 @@
+# Lets hatch-vcs read the release version from GitHub source archives, which have no
+# git history (for example when the repository is used as a GitHub Action).
+.git_archival.txt export-subst

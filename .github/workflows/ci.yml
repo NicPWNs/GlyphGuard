@@ -4,19 +4,27 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
-      - run: pip install -e . ruff mypy pytest hypothesis
+      - run: python -m pip install -e . ruff mypy pytest hypothesis
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
@@ -28,31 +36,72 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.11", "3.12", "3.13", "3.14"]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install -e . pytest hypothesis
+      - run: python -m pip install -e . pytest hypothesis
       - run: pytest
+
+  package:
+    # The sdist and wheel build, pass metadata checks, and work when installed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # tags drive the version
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - name: Smoke-test the installed wheel
+        run: |
+          python -m venv /tmp/wheel
+          /tmp/wheel/bin/pip install dist/*.whl
+          /tmp/wheel/bin/glyphguard --version
+          /tmp/wheel/bin/glyphguard catalog > /dev/null
 
   unicode-data:
     # The vendored tables must match what scripts/gen_data.py produces from unicode.org.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14"
       - run: python scripts/gen_data.py --check
 
   dogfood:
-    # GlyphGuard scans its own repository.
+    # GlyphGuard scans its own repository, through its own GitHub Action.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: "3.14"
-      - run: pip install -e .
-      - run: git ls-files -z -- . ':!src/glyphguard/_data/' | xargs -0 glyphguard detect --fail-on low
+          persist-credentials: false
+      - uses: ./ # zizmor: ignore[self-repository]
+        with:
+          fail-on: low
+
+  workflows:
+    # Security lint for this repository's GitHub Actions workflows.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          advanced-security: false

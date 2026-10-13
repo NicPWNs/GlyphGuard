@@ -152,21 +152,34 @@ assert gg.sanitize("\N{RIGHT-TO-LEFT OVERRIDE}admin\N{BRAILLE PATTERN BLANK}", "
 assert gg.inspect("\N{HANGUL FILLER}").findings  # renders as nothing: flagged
 ```
 
-**Block hidden Unicode in CI.** Use the pre-commit hook:
+**Block hidden Unicode in pull requests.** The GitHub Action scans every tracked file and
+annotates findings inline on the diff:
+
+```yaml
+on: [pull_request]
+jobs:
+  glyphguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: NicPWNs/GlyphGuard@v0.1.0
+        with:
+          fail-on: medium      # info | low | medium | high | critical
+          # paths: "prompts/ docs/README.md"   # default: every file tracked by git
+```
+
+Or run it before every commit with [pre-commit](https://pre-commit.com):
 
 ```yaml
 repos:
   - repo: https://github.com/NicPWNs/GlyphGuard
-    rev: main
+    rev: v0.1.0
     hooks:
       - id: glyphguard
 ```
 
-Or add a workflow step:
-
-```yaml
-- run: pipx run --spec git+https://github.com/NicPWNs/GlyphGuard glyphguard detect $(git ls-files)
-```
+`glyphguard detect --format github` emits the same annotations from any CI script, and
+`--files0-from -` reads a `git ls-files -z` listing from stdin.
 
 ## What it detects
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
 build-backend = "hatchling.build"
 
 [project]
@@ -45,7 +45,11 @@ glyphguard = "glyphguard.cli:main"
 dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.15", "mypy>=1.15"]
 
 [tool.hatch.version]
-path = "src/glyphguard/__init__.py"
+source = "vcs"  # the version comes from the latest v* git tag
+
+[tool.hatch.version.raw-options]
+fallback_version = "0.0.0"  # source archives without git history, e.g. the GitHub Action
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.sdist]
 include = ["src/glyphguard", "scripts", "tests", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE"]

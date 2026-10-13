@@ -1,0 +1,54 @@
+name: Unicode watch
+
+# Opens an issue when unicode.org publishes a Unicode version newer than the one
+# GlyphGuard's tables are pinned to (UNICODE_VERSION in scripts/gen_data.py).
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # open the update issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Compare with the latest Unicode release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          latest=$(python scripts/gen_data.py --check-latest)
+          status=$?
+          if [[ $status -eq 0 ]]; then
+            echo "Up to date (latest is Unicode $latest)"
+            exit 0
+          elif [[ $status -ne 3 ]]; then
+            echo "::error::Could not determine the latest Unicode version"
+            exit "$status"
+          fi
+          title="Update to Unicode $latest"
+          if gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[].number' | grep -q .; then
+            echo "Issue already open: $title"
+            exit 0
+          fi
+          gh issue create --title "$title" --body "Unicode $latest has been published at https://www.unicode.org/versions/Unicode$latest/.
+
+          To update:
+
+          1. Set \`UNICODE_VERSION = \"$latest\"\` in \`scripts/gen_data.py\` and run \`python scripts/gen_data.py\`.
+          2. Update the version in \`tests/test_catalog_ucd.py\`, the README badge and the CHANGELOG.
+          3. Run the test suite. New default-ignorable, format or variation-selector characters may need catalog or benign-corpus changes.
+
+          _Opened by the Unicode watch workflow._"

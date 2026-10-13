@@ -12,6 +12,8 @@ reordering, terminal escapes and stacked combining marks.
     'paypal'
 """
 
+from importlib import metadata as _metadata
+
 from glyphguard import stego
 from glyphguard.catalog import Severity, Technique, techniques
 from glyphguard.detect import Options, detect, payloads
@@ -20,7 +22,10 @@ from glyphguard.report import CharInfo, Report, inspect
 from glyphguard.sanitize import Change, Profile, SanitizeResult, profiles, reveal, sanitize
 from glyphguard.ucd import UNICODE_VERSION
 
-__version__ = "0.1.0.dev0"
+try:
+    __version__ = _metadata.version("glyphguard")
+except _metadata.PackageNotFoundError:  # running from a source tree without installing
+    __version__ = "0.0.0"
 
 __all__ = [
     "UNICODE_VERSION",

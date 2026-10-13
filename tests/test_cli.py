@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from glyphguard.cli import main, unescape
+from glyphguard.cli import _gh_data, _gh_property, main, unescape
 
 
 def run(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, str]:
@@ -86,3 +86,35 @@ def test_detect_skips_binary_files(capsys: pytest.CaptureFixture[str], tmp_path:
     path.write_bytes(b"\x89PNG\x00\x00" + b"\xe2\x80\xae")  # NUL bytes, then an RLO
     assert run(capsys, "detect", str(path))[0] == 0
     assert run(capsys, "detect", "--binary", str(path))[0] == 1
+
+
+def test_detect_github_annotations(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    path = tmp_path / "evil.py"
+    path.write_bytes(b'ok = 1\nx = "user\xe2\x80\xae"  # trailing\n\xe2\x80\x83\n')
+    code, out = run(capsys, "detect", "--format", "github", "--min-severity", "low", str(path))
+    lines = out.splitlines()
+    assert code == 1
+    assert lines[0] == (
+        f"::error file={_gh_property(str(path))},line=2,col=10,"
+        "title=GG-BIDI-001 Bidirectional override (high)::U+202E RIGHT-TO-LEFT OVERRIDE"
+    )
+    assert lines[-1].startswith(
+        f"::warning file={_gh_property(str(path))},line=3,col=1,title=GG-INV-006"
+    )
+
+
+def test_github_escaping() -> None:
+    assert _gh_data("50% done\r\nnext") == "50%25 done%0D%0Anext"
+    assert _gh_property("a,b:c") == "a%2Cb%3Ac"
+
+
+def test_detect_files0_from(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    clean, evil = tmp_path / "clean.txt", tmp_path / "evil.txt"
+    clean.write_text("fine\n", encoding="utf-8")
+    evil.write_bytes(b"fun\xe2\x80\x8bding\n")
+    listing = tmp_path / "files.lst"
+    listing.write_bytes(b"\0".join(str(p).encode() for p in (clean, evil)) + b"\0")
+    code, out = run(capsys, "detect", "--files0-from", str(listing))
+    assert code == 1
+    assert f"{evil}:1:4: medium GG-INV-001" in out
+    assert str(clean) not in out

@@ -66,7 +66,30 @@ mypy
 
 `src/glyphguard/_data/ucd.py` is generated. To move to a new Unicode version, change
 `UNICODE_VERSION` in `scripts/gen_data.py` and run it; CI checks the committed tables with
-`python scripts/gen_data.py --check`.
+`python scripts/gen_data.py --check`. The weekly **Unicode watch** workflow opens an issue
+when a newer Unicode version is published.
+
+## Releasing
+
+The package version comes from the git tag (via `hatch-vcs`), so there is no version
+number to bump in the code.
+
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [0.1.0] - YYYY-MM-DD` (and start a
+   new empty `## [Unreleased]` above it). Merge that to `main`.
+2. Go to **Actions > Release > Run workflow** and enter `0.1.0`. You can also push a
+   `v0.1.0` tag yourself.
+3. The workflow creates the tag, builds the sdist and wheel, tests the built wheel, and
+   publishes a GitHub Release with the CHANGELOG section as its notes. Versions such as
+   `0.2.0rc1` are marked as pre-releases.
+
+Other details:
+
+- **PyPI:** publishing uses Trusted Publishing and is off by default. To turn it on, add
+  a trusted publisher on PyPI (owner `NicPWNs`, repository `GlyphGuard`, workflow
+  `release.yml`, environment `pypi`), then set the repository variable
+  `PYPI_PUBLISH=true`.
+- **Build provenance:** attestations are generated automatically once the repository is
+  public.
 
 ## Brand assets
 

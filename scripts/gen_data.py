@@ -243,12 +243,36 @@ def _ints(values: list[int]) -> str:
     return "(" + ",".join(str(v) for v in values) + ("," if len(values) == 1 else "") + ")"
 
 
+EXIT_NEWER_UNICODE = 3
+
+
+def latest_unicode_version() -> str:
+    """The version unicode.org currently publishes as the latest UCD."""
+    url = "https://www.unicode.org/Public/UCD/latest/ReadMe.txt"
+    with urllib.request.urlopen(url, timeout=60) as response:
+        text = response.read().decode("utf-8")
+    match = re.search(r"[Vv]ersion (\d+\.\d+\.\d+)", text)
+    if match is None:
+        raise RuntimeError(f"no version number found in {url}")
+    return match.group(1)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--version", default=UNICODE_VERSION)
     parser.add_argument("--check", action="store_true", help="fail if the output is out of date")
+    parser.add_argument(
+        "--check-latest",
+        action="store_true",
+        help=f"print the latest Unicode version; exit {EXIT_NEWER_UNICODE} if newer than pinned",
+    )
     args = parser.parse_args()
 
+    if args.check_latest:
+        latest = latest_unicode_version()
+        print(latest)
+        newer = tuple(map(int, latest.split("."))) > tuple(map(int, UNICODE_VERSION.split(".")))
+        return EXIT_NEWER_UNICODE if newer else 0
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
         parser.error("--version must look like 18.0.0")
     generated = build(args.version)
