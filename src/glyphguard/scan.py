@@ -24,6 +24,7 @@ from pathlib import PurePath
 
 from glyphguard.catalog import Severity
 from glyphguard.detect import detect
+from glyphguard.escapes import JSON_SUFFIXES, detect_escaped
 from glyphguard.findings import Finding
 
 # Files that AI coding agents read as instructions or configuration, as (glob, kind).
@@ -109,20 +110,34 @@ def escalate(findings: Iterable[Finding], kind: str | None) -> list[Finding]:
     ]
 
 
+def decodes_escapes(path: str) -> bool:
+    """Whether ``scan`` decodes Unicode escapes in this file by default (JSON files)."""
+    return path.lower().endswith(JSON_SUFFIXES)
+
+
 def scan_text(
     text: str,
     path: str,
     *,
     techniques: Sequence[str] | None = None,
     min_severity: Severity | str = Severity.INFO,
+    escapes: bool | None = None,
 ) -> list[Finding]:
     """Findings in the contents of the file at ``path``, escalated by what the file is.
 
-    ``min_severity`` applies after escalation, so a medium finding in an agent file
-    survives ``min_severity="high"``.
+    ``escapes`` decodes ``\\uXXXX``-style escapes and reports what they hide; by default
+    only in JSON files, where escapes are data rather than source code. ``min_severity``
+    applies after escalation, so a medium finding in an agent file survives
+    ``min_severity="high"``.
     """
     floor = Severity.parse(min_severity)
-    found = detect(text, techniques=list(techniques) if techniques else None)
+    selected = list(techniques) if techniques else None
+    found = detect(text, techniques=selected)
+    if escapes if escapes is not None else decodes_escapes(path):
+        found = sorted(
+            [*found, *detect_escaped(text, techniques=selected)],
+            key=lambda f: (f.start, f.end, f.technique_id),
+        )
     return [f for f in escalate(found, agent_config_kind(path)) if f.severity >= floor]
 
 

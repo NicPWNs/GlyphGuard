@@ -16,6 +16,11 @@ All notable changes to GlyphGuard are documented here. The format follows
   there says which kind of file it is in. `--agents-only` and `--list-agent-files` are
   also available, as is the `glyphguard.scan` module (`agent_config_kind`, `escalate`,
   `scan_text`).
+- `scan` decodes Unicode escape sequences in JSON files and reports what they hide. An
+  MCP tool description can carry tag smuggling as plain-ASCII escapes that a raw scan
+  can't see. Findings point at the escapes in the file. `--escapes all` extends this to
+  every file, and `--escapes none` turns it off. The decoder is
+  `glyphguard.escapes.detect_escaped()`.
 - `glyphguard.net`: `check_hostname()` and `check_url()` find deceptive domains.
   - Punycode is decoded the way browsers display it, and each label is judged on its own.
   - Flagged: mixed scripts, words whose every letter has an ASCII lookalike, styled or
