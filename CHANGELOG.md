@@ -6,6 +6,8 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-13
+
 ### Added
 
 - SARIF 2.1.0 output: `glyphguard detect --format sarif`, or `--sarif FILE` alongside any
@@ -51,6 +53,7 @@ First release: the detection, decoding and sanitization core.
 - Conformance vectors, a multilingual benign corpus, property-based tests, and a
   repo-hygiene test that runs GlyphGuard on its own sources.
 
-[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.2
 [0.1.1]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.1
 [0.1.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.0
