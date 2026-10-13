@@ -15,6 +15,7 @@
 
 <p align="center">
   <a href="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/glyphguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/glyphguard?color=3ddc84"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
   <img alt="Unicode 18.0" src="https://img.shields.io/badge/unicode-18.0-3ddc84">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-3ddc84">
@@ -58,12 +59,13 @@ Standard Unicode normalization (NFC/NFKC) catches none of this. GlyphGuard is bu
 ## Install
 
 ```console
-pipx install git+https://github.com/NicPWNs/GlyphGuard     # the CLI
-pip install git+https://github.com/NicPWNs/GlyphGuard      # the library
+pipx install glyphguard     # the CLI
+pip install glyphguard      # the library
 ```
 
 Python 3.11+, no dependencies. GlyphGuard ships its own Unicode 18.0 tables, so results
-are the same on every interpreter. (PyPI release coming with v0.1.)
+are the same on every interpreter. Releases are built by GitHub Actions and published to
+PyPI with Trusted Publishing.
 
 ## Command line
 

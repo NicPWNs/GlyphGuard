@@ -84,12 +84,13 @@ number to bump in the code.
 
 Other details:
 
-- **PyPI:** publishing uses Trusted Publishing and is off by default. To turn it on, add
-  a trusted publisher on PyPI (owner `NicPWNs`, repository `GlyphGuard`, workflow
-  `release.yml`, environment `pypi`), then set the repository variable
-  `PYPI_PUBLISH=true`.
-- **Build provenance:** attestations are generated automatically once the repository is
-  public.
+- **PyPI:** every release is published to PyPI with Trusted Publishing (no API tokens).
+  The trusted publisher is owner `NicPWNs`, repository `GlyphGuard`, workflow
+  `release.yml`, environment `pypi`. The `pypi` environment only accepts deployments from
+  `main` and `v*` tags. Setting the repository variable `PYPI_PUBLISH` to anything other
+  than `true` pauses publishing.
+- **Build provenance:** the release workflow attests every built file, so users can run
+  `gh attestation verify <file> --repo NicPWNs/GlyphGuard`.
 
 ## Brand assets
 
