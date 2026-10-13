@@ -248,7 +248,8 @@ class Guard:
             optional per-term ``mode``.
         mode: ``"word"`` (default; the term must stand alone, so ``admin`` does not match
             ``badminton``), ``"contains"`` (anywhere) or ``"exact"`` (the whole text).
-        allow: Words that may contain a protected term (for example ``"discordant"``).
+        allow: Words that may contain a protected term, for example ``"supportive"``
+            when protecting ``"support"`` in ``contains`` mode.
     """
 
     def __init__(

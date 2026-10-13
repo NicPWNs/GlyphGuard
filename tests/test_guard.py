@@ -18,7 +18,7 @@ def styled(word: str, first: int) -> str:
 
 @pytest.fixture(scope="module")
 def guard() -> gg.Guard:
-    return gg.Guard(["admin", "support", "discord"], allow=["discordant"])
+    return gg.Guard(["admin", "support", "moderator"])
 
 
 @pytest.mark.parametrize(
@@ -45,9 +45,9 @@ def guard() -> gg.Guard:
             "\N{LATIN SMALL LETTER A WITH GRAVE}dm\N{LATIN SMALL LETTER I WITH GRAVE}n",
             ("diacritic",),
         ),
-        ("d i s c 0 r d", ("leetspeak", "separator")),
+        ("m 0 d e r a t o r", ("leetspeak", "separator")),
         ("supp0rt desk", ("leetspeak",)),
-        ("disc" + CYR_O + "rd", ("lookalike",)),
+        ("m" + CYR_O + "derator", ("lookalike",)),
     ],
 )
 def test_disguised_terms_are_caught(
@@ -61,7 +61,7 @@ def test_disguised_terms_are_caught(
     assert match.techniques == techniques
 
 
-@pytest.mark.parametrize("text", ["admin", "ADMIN", "Ask an Admin.", "Discord"])
+@pytest.mark.parametrize("text", ["admin", "ADMIN", "Ask an Admin.", "Moderator"])
 def test_plain_terms_match_but_are_not_disguised(guard: gg.Guard, text: str) -> None:
     (match,) = guard.check(text).matches
     assert not match.disguised
@@ -69,7 +69,7 @@ def test_plain_terms_match_but_are_not_disguised(guard: gg.Guard, text: str) -> 
 
 
 @pytest.mark.parametrize(
-    "text", ["badminton club", "administrator", "the admins", "discordant views", "a dim inn", ""]
+    "text", ["badminton club", "administrator", "the admins", "supportive views", "a dim inn", ""]
 )
 def test_clean_text_is_allowed(guard: gg.Guard, text: str) -> None:
     result = guard.check(text)
@@ -86,9 +86,9 @@ def test_spans_point_into_the_original_text(guard: gg.Guard) -> None:
 
 
 def test_multiple_terms_sorted(guard: gg.Guard) -> None:
-    result = guard.check("disc" + CYR_O + "rd Support and admin")
+    result = guard.check("m" + CYR_O + "derator Support and admin")
     assert [(m.term, m.disguised) for m in result.matches] == [
-        ("discord", True),
+        ("moderator", True),
         ("support", False),
         ("admin", False),
     ]

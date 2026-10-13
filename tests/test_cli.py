@@ -158,7 +158,7 @@ def test_detect_exclude(
 
 
 def test_check(capsys: pytest.CaptureFixture[str]) -> None:
-    code, out = run(capsys, "check", "-p", "admin", "-p", "discord", "-e", r"ask the \u0430dm1n")
+    code, out = run(capsys, "check", "-p", "admin", "-p", "support", "-e", r"ask the \u0430dm1n")
     assert code == 1
     assert "block  'admin' at [8:13] (leetspeak, lookalike)" in out
     assert "<U+0430>dm1n" in out  # the disguise is shown, never echoed raw
@@ -167,7 +167,20 @@ def test_check(capsys: pytest.CaptureFixture[str]) -> None:
     code, out = run(capsys, "check", "-p", "admin", "badminton")
     assert (code, out.strip()) == (0, "allow  no protected terms found")
     assert run(capsys, "check", "-p", "admin", "--mode", "contains", "badminton")[0] == 1
-    assert run(capsys, "check", "-p", "discord", "--allow", "discordant", "discordant")[0] == 0
+    assert (
+        run(
+            capsys,
+            "check",
+            "-p",
+            "support",
+            "--mode",
+            "contains",
+            "--allow",
+            "supportive",
+            "supportive",
+        )[0]
+        == 0
+    )
 
 
 def test_check_json_and_terms_file(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
