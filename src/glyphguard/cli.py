@@ -1,5 +1,5 @@
 """Command-line interface: ``glyphguard inspect | detect | scan | sanitize | check | skeleton |
-confusable | catalog``."""
+confusable | url | catalog``."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from glyphguard.confusables import is_confusable, restriction_level, skeleton
 from glyphguard.detect import detect
 from glyphguard.findings import Finding
 from glyphguard.guard import MODES, Guard, canonicalize
+from glyphguard.net import check_hostname, check_url
 from glyphguard.report import inspect
 from glyphguard.sanitize import profiles, reveal, sanitize
 from glyphguard.sarif import Located, to_sarif
@@ -380,8 +381,9 @@ def cmd_check(args: argparse.Namespace, out: _Out) -> int:
     return EXIT_FINDINGS if result.blocked else EXIT_OK
 
 
-def _escape_all(text: str) -> str:
-    return "".join(c if 0x20 < ord(c) < 0x7F else f"<U+{ord(c):04X}>" for c in text)
+def _escape_all(text: str, *, keep_spaces: bool = False) -> str:
+    low = 0x20 if keep_spaces else 0x21
+    return "".join(c if low <= ord(c) < 0x7F else f"<U+{ord(c):04X}>" for c in text)
 
 
 def cmd_skeleton(args: argparse.Namespace, out: _Out) -> int:
@@ -420,6 +422,45 @@ def cmd_confusable(args: argparse.Namespace, out: _Out) -> int:
             verdict = out.style("distinct", "32")
         out(verdict)
     return EXIT_OK if same_skeleton or same_key else EXIT_FINDINGS
+
+
+def cmd_url(args: argparse.Namespace, out: _Out) -> int:
+    protect = list(args.protect)
+    deceptive = False
+    records = []
+    for raw in args.urls:
+        value = unescape(raw) if args.unescape else raw
+        if "://" in value or value.lower().startswith("mailto:"):
+            check = check_url(value, protect=protect)
+            host, reasons = check.host, list(check.reasons)
+        else:
+            host, reasons = check_hostname(value, protect=protect), []
+        if host is not None:
+            reasons += list(host.reasons)
+            reasons += [f"imitates protected domain {d}" for d in host.lookalike_of]
+        deceptive = deceptive or bool(reasons)
+        if args.format == "json":
+            records.append(
+                {
+                    "input": value,
+                    "deceptive": bool(reasons),
+                    "reasons": reasons,
+                    "host": host.to_dict() if host else None,
+                }
+            )
+            continue
+        verdict = out.style("deceptive", "31") if reasons else out.style("ok", "32")
+        out(f"{verdict}  {_escape_all(value)}")
+        if host is not None:
+            out(f"    shown as  {_escape_all(host.unicode)}")
+            out(f"    sent as   {host.ascii}")
+            if host.reads_as != host.unicode:
+                out(f"    reads as  {_escape_all(host.reads_as)}")
+        for reason in reasons:
+            out(f"    - {_escape_all(reason, keep_spaces=True)}")
+    if args.format == "json":
+        out(json.dumps(records, indent=2))
+    return EXIT_FINDINGS if deceptive else EXIT_OK
 
 
 # --- catalog ------------------------------------------------------------------------
@@ -615,6 +656,22 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-e", "--unescape", action="store_true", help="interpret escapes in A and B")
     p.add_argument("--format", choices=("text", "json"), default="text")
     p.set_defaults(func=cmd_confusable)
+
+    p = sub.add_parser(
+        "url", help="check URLs or hostnames for lookalike domains; exit 1 if one is deceptive"
+    )
+    p.add_argument("urls", nargs="+", metavar="URL", help="URLs or bare hostnames")
+    p.add_argument(
+        "-p",
+        "--protect",
+        action="append",
+        default=[],
+        metavar="DOMAIN",
+        help="domain to defend, e.g. paypal.com (repeatable)",
+    )
+    p.add_argument("-e", "--unescape", action="store_true", help="interpret escapes in URLs")
+    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.set_defaults(func=cmd_url)
 
     p = sub.add_parser("catalog", help="list techniques and profiles")
     p.add_argument("--format", choices=("text", "json"), default="text")

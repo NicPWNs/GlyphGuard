@@ -16,6 +16,15 @@ All notable changes to GlyphGuard are documented here. The format follows
   there says which kind of file it is in. `--agents-only` and `--list-agent-files` are
   also available, as is the `glyphguard.scan` module (`agent_config_kind`, `escalate`,
   `scan_text`).
+- `glyphguard.net`: `check_hostname()` and `check_url()` find deceptive domains.
+  - Punycode is decoded the way browsers display it, and each label is judged on its own.
+  - Flagged: mixed scripts, words whose every letter has an ASCII lookalike, styled or
+    fullwidth letters, invisible characters, characters not allowed in identifiers,
+    punycode that decodes to ASCII, and invalid punycode.
+  - With `protect=[...]`, it reports hostnames that pass for a protected domain or start
+    with one (`paypal.com.verify.example`).
+  - It catches `https://paypal.com@evil.example/` user-name tricks.
+  - New command: `glyphguard url`.
 - Conformance vectors modeled on published incidents: the Rules File Backdoor
   (tag-smuggled and bidi-reordered instructions in rules files) and GlassWorm (JavaScript
   hidden in variation selectors).
