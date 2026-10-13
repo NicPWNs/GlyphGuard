@@ -258,7 +258,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: NicPWNs/GlyphGuard@v0.2.0
+      - uses: NicPWNs/GlyphGuard@v0.3.0
         with:
           fail-on: medium        # info | low | medium | high | critical
           upload-sarif: true     # show findings under Security > Code scanning
@@ -271,7 +271,7 @@ Or run it before every commit with [pre-commit](https://pre-commit.com):
 ```yaml
 repos:
   - repo: https://github.com/NicPWNs/GlyphGuard
-    rev: v0.2.0
+    rev: v0.3.0
     hooks:
       - id: glyphguard
 ```

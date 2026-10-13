@@ -352,29 +352,43 @@ Still open:
 
 ## 11. Progress
 
-**v0.1 Foundation: done, apart from publishing.**
+All three releases so far are on PyPI, published from GitHub Actions with Trusted
+Publishing. From v0.2.0 on, releases also carry SLSA level 3 provenance and Sigstore
+signatures.
 
-- Catalog of 25 techniques: INV x10, SMUG x4, BIDI x4, CTRL x4, MARK x3.
-- `detect`, `payloads`, `inspect`, `sanitize` (5 profiles), `reveal`.
-- `stego` encoders and decoders: tags, variation selectors, zero-width binary.
-- CLI: `inspect`, `detect`, `sanitize`, `catalog`.
-- `scripts/gen_data.py`; CI workflow; pre-commit hook definition.
-- 311 tests: conformance vectors, a benign multilingual corpus, Hypothesis property
-  tests (idempotent sanitization, valid spans, stego round trips), CLI tests, and a
-  repo-hygiene test that runs GlyphGuard on its own sources.
+**v0.1 Foundation: done (0.1.0 to 0.1.2).**
+
+- The INV, SMUG, BIDI, CTRL and MARK families, and the core API: `detect`, `payloads`,
+  `inspect`, `sanitize` (5 profiles) and `reveal`.
+- `stego` encoders and decoders.
+- SARIF output, a GitHub Action (on the Marketplace) and a pre-commit hook.
+- A benign multilingual corpus, Hypothesis property tests, and a repo-hygiene test that
+  runs GlyphGuard on its own sources.
+
+**v0.2 Confusables: done (0.2.0).**
+
+- The CONF family, built on TR39 data: mixed-script, whole-script, styled-letter and
+  mixed-numeral lookalikes. The context-aware `fold` sanitize action.
+- `skeleton`, `is_confusable`, `restriction_level`, `canonicalize`, and the `Guard`
+  protected-term matcher (lookalikes, leetspeak, separators, repeats, invisibles).
+- Python 3.15, ClusterFuzzLite fuzzing, and signed releases.
+
+**v0.3 Forensics and scanning: done (0.3.0).**
+
+- `glyphguard scan`: repository scanning that is stricter on AI agent instruction files.
+- `glyphguard.net` (`glyphguard url`): lookalike and punycode hostnames, and
+  user-name tricks. This was carried over from v0.2's `net` item.
+- Decoding of escaped hidden text in JSON.
+- `glyphguard mcp`: MCP tool scanning and pinning. It never starts servers.
+- Conformance vectors modeled on the Rules File Backdoor and GlassWorm.
+
+Deferred: bidiSkeleton (it needs a full UBA implementation) and differential testing
+against ICU.
 
 Lesson from building it: the tooling that wrote these files silently turned Unicode escape
 sequences into literal characters, including RLO overrides and zero-width spaces. The
-hygiene test caught every case. That is the strongest argument yet for the `scan` and
-pre-commit surfaces in v0.3.
+hygiene test and GlyphGuard's own scan caught every case, which supports the `scan` and
+pre-commit surfaces.
 
-Public-release prep: brand identity (glitch wordmark, mark, social card, terminal demo
-via scripts/make_brand.py), README with executable examples, CONTRIBUTING, SECURITY,
-CHANGELOG, issue forms for missed attacks and false positives, binary-file skipping in
-`detect`.
-
-Not yet done from v0.1's list: PyPI publishing (the name `glyphguard` was still available
-on 2026-10-13).
-
-Next: **v0.2 Confusables**. TR39 skeleton/bidiSkeleton, mixed-script detection,
-restriction levels, `canonicalize`, extended maps, and the `Guard` protected-term matcher.
+Next: **v0.4 Red team**. Mutators for every catalog technique, PyRIT, garak and
+promptfoo adapters, and a guardrail robustness harness.
