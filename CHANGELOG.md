@@ -6,6 +6,8 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-13
+
 ### Fixed
 
 - Images and links in the PyPI project description. They were repository-relative paths
@@ -35,5 +37,6 @@ First release: the detection, decoding and sanitization core.
 - Conformance vectors, a multilingual benign corpus, property-based tests, and a
   repo-hygiene test that runs GlyphGuard on its own sources.
 
-[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/NicPWNs/GlyphGuard/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.1
 [0.1.0]: https://github.com/NicPWNs/GlyphGuard/releases/tag/v0.1.0

@@ -16,7 +16,7 @@
 <p align="center">
   <a href="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/NicPWNs/GlyphGuard/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://pypi.org/project/glyphguard/"><img alt="PyPI" src="https://img.shields.io/pypi/v/glyphguard?color=3ddc84"></a>
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776ab">
+  <a href="https://pypi.org/project/glyphguard/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/glyphguard?color=3776ab"></a>
   <img alt="Unicode 18.0" src="https://img.shields.io/badge/unicode-18.0-3ddc84">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-0-3ddc84">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
