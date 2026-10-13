@@ -5,22 +5,37 @@ reporting responsibly.
 
 ## Supported versions
 
-GlyphGuard is pre-alpha. Only the latest commit on `main` receives fixes.
+GlyphGuard is pre-alpha. Security fixes go into the next release, built from `main`; only
+the latest release on [PyPI](https://pypi.org/project/glyphguard/) is supported.
+
+| Version | Supported |
+|---|---|
+| Latest 0.x release | Yes |
+| Older releases | No; please upgrade |
 
 ## Reporting a vulnerability
 
-Please report privately through GitHub:
-**Security > Report a vulnerability** on this repository. Don't open a public issue for
-anything in the "in scope" list below.
+Please report privately using GitHub's private vulnerability reporting:
+<https://github.com/NicPWNs/GlyphGuard/security/advisories/new>. Don't open a public
+issue, pull request or discussion for anything in the "in scope" list below.
 
 Include the input as escaped code points (for example the output of
 `glyphguard inspect --format json`), the API or command you ran, what you expected, and
 what happened. A proof of concept against your own system is welcome; please don't test
 against systems you don't own.
 
-You'll get an acknowledgment within a week. Fixes for confirmed issues are prioritized
-over feature work, and reporters are credited in the changelog unless they prefer
-otherwise.
+## Disclosure timeline
+
+| Step | Target |
+|---|---|
+| Acknowledge your report | within 7 days |
+| Confirm the issue and agree on severity | within 14 days |
+| Release a fix | within 90 days, sooner for critical issues |
+| Publish a GitHub security advisory (and request a CVE if warranted) | when the fix is released |
+
+We'll keep you updated along the way and agree on the disclosure date with you. Reporters
+are credited in the advisory and the changelog unless they prefer otherwise. If a fix
+needs more than 90 days, we'll explain why and agree on a new date before then.
 
 ## In scope
 

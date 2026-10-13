@@ -12,3 +12,16 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: ci
+
+  # Keeps the hash-pinned CI tool locks in requirements/ current.
+  - package-ecosystem: pip
+    directory: /requirements
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      ci-tools:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

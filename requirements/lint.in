@@ -1,0 +1,4 @@
+# Linters and type checker. mypy also needs the test dependencies it type-checks.
+-r test.in
+ruff
+mypy

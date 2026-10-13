@@ -6,6 +6,13 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- CI and release tooling (pytest, hypothesis, ruff, mypy, build, twine) is installed from
+  hash-pinned locks in `requirements/`, kept current by Dependabot.
+- The security policy links private vulnerability reporting directly and states a
+  disclosure timeline.
+
 ## [0.1.2] - 2026-10-13
 
 ### Added

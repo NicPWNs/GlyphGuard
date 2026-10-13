@@ -1,0 +1,3 @@
+# Test runner (CI test matrix, release wheel tests).
+pytest
+hypothesis
