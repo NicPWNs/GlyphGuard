@@ -102,6 +102,7 @@ jobs:
       - uses: ./ # zizmor: ignore[self-repository]
         with:
           fail-on: low
+          exclude: docs/PLAN.md # the design notes show lookalike letters as examples
           upload-sarif: ${{ github.event_name == 'push' }}
 
   workflows:

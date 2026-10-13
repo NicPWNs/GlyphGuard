@@ -5,7 +5,7 @@
 #
 # Fields:
 #   id         GG-<FAMILY>-<NNN>
-#   family     INV | SMUG | BIDI | CTRL | MARK  (CONF, OBF, NORM arrive in later releases)
+#   family     INV | SMUG | BIDI | CTRL | MARK | CONF  (OBF, NORM arrive in later releases)
 #   slug       short kebab-case name, also accepted wherever an ID is
 #   title      human-readable name
 #   severity   default severity: info | low | medium | high | critical
@@ -335,3 +335,59 @@ it has no meaningful base. It renders on a dotted circle or attaches to unexpect
 cwe = ["CWE-176"]
 atlas = []
 references = []
+
+[[technique]]
+id = "GG-CONF-001"
+family = "CONF"
+slug = "mixed-script-lookalike"
+title = "Lookalike character from another script"
+severity = "high"
+summary = """A word mixes scripts, and a character from the minority script looks like a \
+letter of the main one, such as a Cyrillic 'a' inside a Latin word. The word reads normally \
+but fails exact matching against blocklists, reserved names and filters (homograph attack)."""
+cwe = ["CWE-1007"]
+atlas = ["AML.T0051"]
+references = [
+  "https://www.unicode.org/reports/tr39/#Mixed_Script_Detection",
+  "https://www.unicode.org/reports/tr39/#Confusable_Detection",
+]
+
+[[technique]]
+id = "GG-CONF-002"
+family = "CONF"
+slug = "whole-script-lookalike"
+title = "Whole word of lookalike characters"
+severity = "medium"
+summary = """A word written entirely in another script whose letters all look like Latin ones \
+(for example an all-Cyrillic spelling of a Latin word), inside predominantly Latin text. \
+Single-script text in its own language is not reported."""
+cwe = ["CWE-1007"]
+atlas = ["AML.T0051"]
+references = ["https://www.unicode.org/reports/tr39/#Whole_Script_Confusables"]
+
+[[technique]]
+id = "GG-CONF-003"
+family = "CONF"
+slug = "compatibility-lookalike"
+title = "Styled lookalike letters"
+severity = "low"
+summary = """Letters from compatibility blocks (mathematical bold or script, fullwidth, \
+circled, squared) that normalize to plain ASCII letters. Popular as "fancy text", and \
+effective at slipping past keyword filters and classifiers. Modifier letters and \
+letterlike symbols used in IPA and mathematics are reported at info level."""
+cwe = ["CWE-1007", "CWE-176"]
+atlas = ["AML.T0051"]
+references = ["https://www.unicode.org/reports/tr15/"]
+
+[[technique]]
+id = "GG-CONF-004"
+family = "CONF"
+slug = "mixed-numerals"
+title = "Mixed number systems"
+severity = "medium"
+summary = """A number mixes digits from different number systems (for example an Arabic-Indic \
+or Devanagari digit among ASCII digits). Many of these digits look like ASCII ones but have \
+different values, so the number displays differently from what a parser reads."""
+cwe = ["CWE-1007"]
+atlas = []
+references = ["https://www.unicode.org/reports/tr39/#Mixed_Number_Detection"]

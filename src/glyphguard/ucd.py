@@ -175,6 +175,11 @@ def is_emoji_component(cp: int) -> bool:
     return _in(_t.EMOJI_COMPONENT, cp)
 
 
+def is_identifier_allowed(cp: int) -> bool:
+    """UTS #39 Identifier_Status=Allowed: recommended for identifiers and names."""
+    return _in(_t.IDENTIFIER_ALLOWED, cp)
+
+
 def is_overlay_mark(cp: int) -> bool:
     """Canonical_Combining_Class 1 (Overlay): marks drawn through their base."""
     return _in(_t.OVERLAY_MARK, cp)

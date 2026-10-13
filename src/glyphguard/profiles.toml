@@ -10,6 +10,8 @@
 #   newline  replace the whole span with one "\n"
 #   escape   replace each code point with a visible <U+XXXX> marker
 #   trim     (GG-MARK-001 only) keep the first `keep_marks` marks of a stack, drop the rest
+#   fold     (CONF family) replace lookalikes with the ASCII they pass for; info-level
+#            findings such as IPA or math notation are left alone
 #
 # GG-INV-005 (text renders blank) describes the whole string and is never edited.
 
@@ -17,6 +19,7 @@
 description = "Text going into a language model or classifier: strip every smuggling channel, keep native scripts and emoji."
 keep_marks = 2
 [profile.llm-input.actions]
+CONF = "fold"
 default = "keep"
 INV = "remove"
 SMUG = "remove"
@@ -35,6 +38,7 @@ CTRL = "remove"
 description = "Model output headed for a UI, terminal or log: also drop private-use and unassigned characters."
 keep_marks = 2
 [profile.llm-output.actions]
+CONF = "fold"
 default = "keep"
 INV = "remove"
 SMUG = "remove"
@@ -51,6 +55,7 @@ CTRL = "remove"
 description = "Usernames, display names and titles: nothing invisible, no reordering, no stacked marks."
 keep_marks = 2
 [profile.display-name.actions]
+CONF = "fold"
 default = "remove"
 "GG-INV-006" = "space"
 "GG-INV-010" = "replace"
@@ -61,6 +66,7 @@ default = "remove"
 description = "Remove everything GlyphGuard flags."
 keep_marks = 2
 [profile.strict.actions]
+CONF = "fold"
 default = "remove"
 "GG-INV-006" = "space"
 "GG-CTRL-004" = "newline"

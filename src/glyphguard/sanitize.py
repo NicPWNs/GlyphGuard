@@ -10,13 +10,14 @@ from importlib.resources import files
 from types import MappingProxyType
 
 from glyphguard import ucd
-from glyphguard.catalog import get
+from glyphguard.catalog import Severity, get
+from glyphguard.confusables import fold_in_context
 from glyphguard.detect import DEFAULT_OPTIONS, Options, detect
 from glyphguard.findings import Finding
 
-ACTIONS = frozenset({"keep", "remove", "replace", "space", "newline", "escape", "trim"})
+ACTIONS = frozenset({"keep", "remove", "replace", "space", "newline", "escape", "trim", "fold"})
 # When findings overlap, the more destructive action wins.
-_PRIORITY = {"keep": 0, "space": 1, "newline": 2, "escape": 3, "replace": 4, "remove": 5}
+_PRIORITY = {"keep": 0, "space": 1, "newline": 2, "fold": 3, "escape": 4, "replace": 5, "remove": 6}
 _WHOLE_TEXT = frozenset({"GG-INV-005"})
 
 
@@ -102,7 +103,20 @@ def _plan(text: str, finding: Finding, action: str, keep_marks: int) -> dict[int
         filler = {"replace": "\ufffd", "space": " ", "newline": "\n"}[action]
         return {i: (filler if i == finding.start else "") for i in span}
     if action == "escape":
-        return {i: f"<U+{ord(text[i]):04X}>" for i in span if not 0x20 <= ord(text[i]) <= 0x7E}
+        # Printable ASCII stays readable (e.g. the "[2K" of an escape sequence), except in
+        # lookalike findings, where the flagged letter itself is the disguise.
+        everything = finding.technique_id.startswith("GG-CONF-")
+        return {
+            i: f"<U+{ord(text[i]):04X}>"
+            for i in span
+            if everything or not 0x20 <= ord(text[i]) <= 0x7E
+        }
+    if action == "fold":
+        # Lookalikes become what they pass for. Info-level findings (IPA, math notation,
+        # ligatures) are left alone: they are routine, not disguises.
+        if finding.severity < Severity.LOW:
+            return {}
+        return {i: folded for i in span if (folded := fold_in_context(text, i)) != text[i]}
     if action == "trim":
         kept = 0
         plan: dict[int, str] = {}

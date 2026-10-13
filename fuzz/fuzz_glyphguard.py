@@ -1,7 +1,8 @@
 """Coverage-guided fuzz target for GlyphGuard (Atheris, run by ClusterFuzzLite).
 
-Feeds arbitrary Unicode text to detection, sanitization, reveal and SARIF output, and
-checks the invariants the rest of the toolkit relies on. Any exception is a finding.
+Feeds arbitrary Unicode text to detection, sanitization, reveal, SARIF output, protected
+term matching and skeletons, and checks the invariants the rest of the toolkit relies
+on. Any exception is a finding.
 
 Run locally (Linux or macOS): pip install atheris && python fuzz/fuzz_glyphguard.py
 """
@@ -29,6 +30,7 @@ else:
     from glyphguard.sarif import Located, to_sarif
 
 PROFILES = tuple(gg.profiles())
+GUARDS = tuple(gg.Guard(["admin", "pay pal"], mode=mode) for mode in ("word", "contains", "exact"))
 
 
 def check(text: str) -> None:
@@ -53,6 +55,16 @@ def check(text: str) -> None:
     stego.decode_tags(text)
     stego.decode_variation_selectors(text)
     stego.decode_binary(text[:256])
+
+    for guard in GUARDS:
+        for m in guard.check(text).matches:
+            assert 0 <= m.start < m.end <= len(text), (m.term, m.start, m.end, len(text))
+            assert all(m.start <= e.index < m.end for e in m.evidence), m
+    key = gg.canonicalize(text)
+    assert gg.canonicalize(key) == key
+    skeleton = gg.skeleton(text)
+    assert gg.skeleton(skeleton) == skeleton
+    gg.restriction_level(text)
 
 
 def test_one_input(data: bytes) -> None:

@@ -130,3 +130,80 @@ def test_detect_files0_from(capsys: pytest.CaptureFixture[str], tmp_path: Path) 
     assert code == 1
     assert f"{evil}:1:4: medium GG-INV-001" in out
     assert str(clean) not in out
+
+
+def test_detect_exclude(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("docs/notes.md", "docs/deep/more.md", "src/app.py", "src/vendor/lib.py"):
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).write_bytes(b"fun\xe2\x80\x8bding\n")
+    monkeypatch.chdir(tmp_path)
+
+    def scanned(*excludes: str) -> set[str]:
+        argv = [arg for pattern in excludes for arg in ("--exclude", pattern)]
+        _, out = run(capsys, "detect", *argv, ".")
+        return {
+            line.split(":")[0].replace("\\", "/").removeprefix("./") for line in out.splitlines()
+        }
+
+    everything = {"docs/notes.md", "docs/deep/more.md", "src/app.py", "src/vendor/lib.py"}
+    assert scanned() == everything
+    assert scanned("docs") == {"src/app.py", "src/vendor/lib.py"}
+    assert scanned("docs/*.md") == {"src/app.py", "src/vendor/lib.py"}  # parent dir matches
+    assert scanned("*.md", "vendor") == {"src/app.py"}
+    assert scanned("./src/") == {"docs/notes.md", "docs/deep/more.md"}
+    code, out = run(capsys, "detect", "--exclude", "*.py", "src/app.py")
+    assert (code, out) == (0, "")
+
+
+def test_check(capsys: pytest.CaptureFixture[str]) -> None:
+    code, out = run(capsys, "check", "-p", "admin", "-p", "discord", "-e", r"ask the \u0430dm1n")
+    assert code == 1
+    assert "block  'admin' at [8:13] (leetspeak, lookalike)" in out
+    assert "<U+0430>dm1n" in out  # the disguise is shown, never echoed raw
+    assert "CYRILLIC SMALL LETTER A" in out
+
+    code, out = run(capsys, "check", "-p", "admin", "badminton")
+    assert (code, out.strip()) == (0, "allow  no protected terms found")
+    assert run(capsys, "check", "-p", "admin", "--mode", "contains", "badminton")[0] == 1
+    assert run(capsys, "check", "-p", "discord", "--allow", "discordant", "discordant")[0] == 0
+
+
+def test_check_json_and_terms_file(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    terms = tmp_path / "terms.txt"
+    terms.write_text("# staff\nadmin  # comment\n\nmoderator\n", encoding="utf-8")
+    code, out = run(capsys, "check", "--protect-file", str(terms), "--format", "json", "m0derat0r")
+    data = json.loads(out)
+    assert code == 1
+    assert data["verdict"] == "block"
+    assert [m["term"] for m in data["matches"]] == ["moderator"]
+
+
+def test_check_needs_terms(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["check", "admin"]) == 2
+    assert "nothing to protect" in capsys.readouterr().err
+
+
+def test_skeleton(capsys: pytest.CaptureFixture[str]) -> None:
+    assert run(capsys, "skeleton", "-e", r"p\u0430yp\u0430l") == (0, "paypal\n")
+    assert run(capsys, "skeleton", "--canonical", "-e", r"\uFF30\u0430y\u200bPal") == (
+        0,
+        "paypal\n",
+    )
+
+
+def test_confusable(capsys: pytest.CaptureFixture[str]) -> None:
+    code, out = run(capsys, "confusable", "-e", "paypal", r"p\u0430yp\u0430l")
+    assert code == 0
+    assert "p<U+0430>yp<U+0430>l" in out
+    assert "confusable (same UTS #39 skeleton)" in out
+    assert run(capsys, "confusable", "Admin", "admin")[0] == 0
+    code, out = run(capsys, "confusable", "apple", "orange")
+    assert (code, out.splitlines()[-1]) == (1, "distinct")
+
+    code, out = run(capsys, "confusable", "--format", "json", "-e", "paypal", r"p\u0430ypal")
+    data = json.loads(out)
+    assert data["confusable"]
+    assert data["same_canonical"]
+    assert data["b"]["restriction_level"] == "minimally-restrictive"

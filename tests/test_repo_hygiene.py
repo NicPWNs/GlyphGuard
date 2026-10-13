@@ -53,4 +53,6 @@ def test_source_is_ascii(path: Path) -> None:
 )
 def test_no_findings(path: Path) -> None:
     findings = gg.detect(path.read_text(encoding="utf-8"), min_severity="low")
+    if path in PROSE:
+        findings = [f for f in findings if f.technique.family != "CONF"]
     assert not findings, [(f.technique_id, f.start, f.message) for f in findings]

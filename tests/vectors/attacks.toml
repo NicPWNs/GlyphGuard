@@ -220,3 +220,54 @@ sanitized = "admin"
 name = "leading combining mark"
 text = "\u0301abc"
 expect = ["GG-MARK-003"]
+
+[[vector]]
+name = "Cyrillic a in admin"
+text = "\u0430dmin"
+expect = ["GG-CONF-001"]
+severity = "high"
+sanitized = "admin"
+
+[[vector]]
+name = "Cyrillic letters in paypal"
+text = "\u0440ayp\u0430l"
+expect = ["GG-CONF-001"]
+sanitized = "paypal"
+
+[[vector]]
+name = "Latin letter hidden in a Cyrillic word"
+text = "\u041F\u0440\u0438\u0432e\u0442"
+expect = ["GG-CONF-001"]
+
+[[vector]]
+name = "Greek omicron in a Latin word"
+text = "g\u03BF\u03BFgle"
+expect = ["GG-CONF-001"]
+sanitized = "google"
+
+[[vector]]
+name = "whole Cyrillic word in English text"
+text = "Log in to your \u0440\u0430\u0443\u0440\u0430 account"
+expect = ["GG-CONF-002"]
+severity = "medium"
+sanitized = "Log in to your paypa account"
+
+[[vector]]
+name = "mathematical bold letters"
+text = "\U0001D41A\U0001D41D\U0001D426\U0001D422\U0001D427"
+expect = ["GG-CONF-003"]
+severity = "low"
+sanitized = "admin"
+
+[[vector]]
+name = "fullwidth letters"
+text = "\uFF41\uFF44\uFF4D\uFF49\uFF4E"
+expect = ["GG-CONF-003"]
+sanitized = "admin"
+
+[[vector]]
+name = "mixed number systems"
+text = "Total: 1\u06623"
+expect = ["GG-CONF-004"]
+severity = "medium"
+sanitized = "Total: 123"

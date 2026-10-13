@@ -1,22 +1,26 @@
-"""Command-line interface: ``glyphguard inspect | detect | sanitize | catalog``."""
+"""Command-line interface: ``glyphguard inspect | detect | sanitize | check | skeleton |
+confusable | catalog``."""
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
 import sys
 import unicodedata
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, TextIO
 
 import glyphguard
 from glyphguard import ucd
 from glyphguard.catalog import Severity, techniques
+from glyphguard.confusables import is_confusable, restriction_level, skeleton
 from glyphguard.detect import detect
 from glyphguard.findings import Finding
+from glyphguard.guard import MODES, Guard, canonicalize
 from glyphguard.report import inspect
 from glyphguard.sanitize import profiles, reveal, sanitize
 from glyphguard.sarif import Located, to_sarif
@@ -173,16 +177,45 @@ def _paths_from(source: str) -> list[str]:
     return [os.fsdecode(p) for p in data.split(b"\0") if p]
 
 
-def _expand_directories(paths: list[str]) -> list[str]:
-    """Replace each directory with the files under it, skipping version-control folders."""
+def _excluded(path: str, patterns: Sequence[str]) -> bool:
+    """True if ``path`` or one of its parent directories matches a glob in ``patterns``.
+
+    As in .gitignore, a pattern without a slash matches a name at any depth.
+    """
+    if not patterns or path == "-":
+        return False
+    parts = [p for p in PurePath(path).as_posix().split("/") if p not in ("", ".")]
+    prefixes = ["/".join(parts[:i]) for i in range(1, len(parts) + 1)]
+    for pattern in patterns:
+        glob = pattern.removeprefix("./").rstrip("/")
+        candidates = prefixes if "/" in glob else parts
+        if any(fnmatch.fnmatchcase(c, glob) for c in candidates):
+            return True
+    return False
+
+
+def _expand_directories(paths: list[str], exclude: Sequence[str] = ()) -> list[str]:
+    """Replace each directory with the files under it, skipping version-control folders
+    and anything matching ``exclude``."""
     expanded: list[str] = []
     for path in paths:
+        if _excluded(path, exclude):
+            continue
         if path == "-" or not os.path.isdir(path):
             expanded.append(path)
             continue
         for root, dirs, files in os.walk(path):
-            dirs[:] = sorted(d for d in dirs if d not in (".git", ".hg", ".svn"))
-            expanded.extend(os.path.join(root, name) for name in sorted(files))
+            dirs[:] = sorted(
+                d
+                for d in dirs
+                if d not in (".git", ".hg", ".svn")
+                and not _excluded(os.path.join(root, d), exclude)
+            )
+            expanded.extend(
+                p
+                for p in (os.path.join(root, name) for name in sorted(files))
+                if not _excluded(p, exclude)
+            )
     return expanded
 
 
@@ -193,7 +226,7 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
     paths = list(args.paths)
     if args.files0_from is not None:
         paths += _paths_from(args.files0_from)
-    for path in _expand_directories(paths):
+    for path in _expand_directories(paths, args.exclude or ()):
         if path == "-":
             sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
         else:
@@ -261,6 +294,79 @@ def cmd_sanitize(args: argparse.Namespace, out: _Out) -> int:
         for c in result.changes:
             err(f"  {c.technique_id:<12} {c.action:<8} [{c.start}:{c.end}] {_safe(c.original)}")
     return EXIT_OK
+
+
+# --- check, skeleton, confusable ----------------------------------------------------
+
+
+def _terms_from(path: str) -> list[str]:
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return [t for t in (line.split("#", 1)[0].strip() for line in lines) if t]
+
+
+def cmd_check(args: argparse.Namespace, out: _Out) -> int:
+    terms = list(args.protect)
+    if args.protect_file:
+        terms += _terms_from(args.protect_file)
+    if not terms:
+        raise ValueError("nothing to protect: pass --protect TERM or --protect-file FILE")
+    text = _read_input(args)
+    result = Guard(terms, mode=args.mode, allow=args.allow).check(text)
+    if args.format == "json":
+        out(json.dumps(result.to_dict(), indent=2))
+    elif not result.matches:
+        out(out.style("allow", "32") + "  no protected terms found")
+    else:
+        for m in result.matches:
+            how = ", ".join(m.techniques) or ("plain" if not m.disguised else "case")
+            out(f"{out.style('block', '31')}  {m.term!r} at [{m.start}:{m.end}] ({how})")
+            out(f"       {_safe(text[m.start : m.end])}")
+            for e in m.evidence:
+                name = ucd.name(e.codepoint)
+                out(f"       {e.index:>5}  U+{e.codepoint:04X}  {e.kind:<10} {name}")
+    return EXIT_FINDINGS if result.blocked else EXIT_OK
+
+
+def _escape_all(text: str) -> str:
+    return "".join(c if 0x20 < ord(c) < 0x7F else f"<U+{ord(c):04X}>" for c in text)
+
+
+def cmd_skeleton(args: argparse.Namespace, out: _Out) -> int:
+    text = _read_input(args)
+    out(_safe(canonicalize(text) if args.canonical else skeleton(text)))
+    return EXIT_OK
+
+
+def cmd_confusable(args: argparse.Namespace, out: _Out) -> int:
+    a, b = (unescape(s) if args.unescape else s for s in (args.a, args.b))
+    same_skeleton = is_confusable(a, b)
+    same_key = canonicalize(a) == canonicalize(b)
+    if args.format == "json":
+        out(
+            json.dumps(
+                {
+                    "confusable": same_skeleton,
+                    "same_canonical": same_key,
+                    "a": {"skeleton": skeleton(a), "restriction_level": str(restriction_level(a))},
+                    "b": {"skeleton": skeleton(b), "restriction_level": str(restriction_level(b))},
+                },
+                indent=2,
+            )
+        )
+    else:
+        for label, value in (("a", a), ("b", b)):
+            out(f"{label}  {_escape_all(value)}")
+            out(f"   skeleton {_escape_all(skeleton(value))}  ({restriction_level(value)})")
+        if same_skeleton:
+            verdict = out.style("confusable", "31") + " (same UTS #39 skeleton)"
+        elif same_key:
+            verdict = (
+                out.style("confusable", "33") + " (same once case, styling and accents are folded)"
+            )
+        else:
+            verdict = out.style("distinct", "32")
+        out(verdict)
+    return EXIT_OK if same_skeleton or same_key else EXIT_FINDINGS
 
 
 # --- catalog ------------------------------------------------------------------------
@@ -362,6 +468,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--binary", action="store_true", help="also scan files that look binary (contain NUL)"
     )
+    p.add_argument(
+        "--exclude",
+        action="append",
+        metavar="GLOB",
+        help="skip files and directories matching GLOB, e.g. 'docs/*.md' (repeatable)",
+    )
     p.set_defaults(func=cmd_detect)
 
     p = sub.add_parser("sanitize", help="neutralize findings and print the cleaned text")
@@ -369,6 +481,54 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-p", "--profile", default="llm-input", choices=sorted(profiles()))
     p.add_argument("--report", action="store_true", help="list changes on stderr")
     p.set_defaults(func=cmd_sanitize)
+
+    p = sub.add_parser(
+        "check", help="check text for disguised protected terms; exit 1 if one is found"
+    )
+    add_text_input(p)
+    p.add_argument(
+        "-p",
+        "--protect",
+        action="append",
+        default=[],
+        metavar="TERM",
+        help="term to protect (repeatable)",
+    )
+    p.add_argument(
+        "--protect-file",
+        metavar="FILE",
+        help="file with one protected term per line ('#' comments)",
+    )
+    p.add_argument(
+        "--mode", choices=MODES, default="word", help="how a term must appear (default: word)"
+    )
+    p.add_argument(
+        "--allow",
+        action="append",
+        default=[],
+        metavar="WORD",
+        help="word that may contain a term (repeatable)",
+    )
+    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("skeleton", help="print the UTS #39 skeleton used to compare lookalikes")
+    add_text_input(p)
+    p.add_argument(
+        "--canonical",
+        action="store_true",
+        help="print the canonical key instead: also folds case, styling, diacritics and invisibles",
+    )
+    p.set_defaults(func=cmd_skeleton)
+
+    p = sub.add_parser(
+        "confusable", help="tell whether two strings can pass for each other; exit 0 if they can"
+    )
+    p.add_argument("a")
+    p.add_argument("b")
+    p.add_argument("-e", "--unescape", action="store_true", help="interpret escapes in A and B")
+    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.set_defaults(func=cmd_confusable)
 
     p = sub.add_parser("catalog", help="list techniques and profiles")
     p.add_argument("--format", choices=("text", "json"), default="text")

@@ -7,6 +7,7 @@ from hypothesis import strategies as st
 
 import glyphguard as gg
 from glyphguard.catalog import Severity, techniques
+from glyphguard.sanitize import ACTIONS
 
 PROFILES = sorted(gg.profiles())
 
@@ -14,15 +15,7 @@ PROFILES = sorted(gg.profiles())
 def test_profiles_cover_known_actions() -> None:
     for profile in gg.profiles().values():
         for tid in techniques():
-            assert profile.action_for(tid) in {
-                "keep",
-                "remove",
-                "replace",
-                "space",
-                "newline",
-                "escape",
-                "trim",
-            }
+            assert profile.action_for(tid) in ACTIONS
 
 
 def test_unknown_profile() -> None:

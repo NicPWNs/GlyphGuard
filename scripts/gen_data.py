@@ -38,6 +38,8 @@ SOURCES = {
     "StandardizedVariants.txt": "ucd/StandardizedVariants.txt",
     "emoji-data.txt": "ucd/emoji/emoji-data.txt",
     "emoji-variation-sequences.txt": "ucd/emoji/emoji-variation-sequences.txt",
+    "confusables.txt": "security/confusables.txt",
+    "IdentifierStatus.txt": "security/IdentifierStatus.txt",
 }
 
 # Binary properties exported as range sets: (source file, property name, exported name).
@@ -188,6 +190,19 @@ def build(version: str) -> str:
             parse_range(fields[0]) for fields in records(files[source]) if fields[1] == prop
         )
     binary["OVERLAY_MARK"] = merge(overlay)
+    binary["IDENTIFIER_ALLOWED"] = merge(
+        parse_range(fields[0])
+        for fields in records(files["IdentifierStatus.txt"])
+        if fields[1] == "Allowed"
+    )
+
+    # UTS #39 confusables: each source code point maps to its prototype sequence.
+    confusables: dict[int, tuple[int, ...]] = {}
+    for fields in records(files["confusables.txt"]):
+        points = [int(cp, 16) for cp in fields[0].split()]
+        if len(points) != 1:
+            raise ValueError(f"unexpected multi-code-point source in confusables.txt: {fields}")
+        confusables[points[0]] = tuple(int(cp, 16) for cp in fields[1].split())
 
     # Valid (base, variation selector) pairs.
     sequences: set[tuple[int, int]] = set()
@@ -234,6 +249,10 @@ def build(version: str) -> str:
         "# Valid variation sequences from StandardizedVariants.txt and",
         "# emoji-variation-sequences.txt, encoded as (base << 21) | selector.",
         f"VARIATION_SEQUENCES = frozenset({_ints(sorted((b << 21) | v for b, v in sequences))})",
+        "",
+        "# UTS #39 confusables.txt: CONFUSABLE_SOURCES[i] has the prototype CONFUSABLE_TARGETS[i].",
+        f"CONFUSABLE_SOURCES = {_ints(sorted(confusables))}",
+        f"CONFUSABLE_TARGETS = {tuple(confusables[cp] for cp in sorted(confusables))!r}",
         "",
     ]
     return "\n".join(out)

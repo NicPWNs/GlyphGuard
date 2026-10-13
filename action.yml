@@ -1,5 +1,5 @@
 name: GlyphGuard
-description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes) in pull requests.
+description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes, lookalike letters) in pull requests.
 author: Nic Jones
 branding:
   icon: eye
@@ -10,6 +10,13 @@ inputs:
     description: >-
       Files to scan, separated by whitespace. Defaults to every file tracked by git.
       Binary files are skipped.
+    required: false
+    default: ""
+  exclude:
+    description: >-
+      Glob patterns of files or directories to skip, separated by whitespace, for example
+      `docs/*.md tests/fixtures`. As in .gitignore, a pattern without a slash matches a
+      name at any depth.
     required: false
     default: ""
   fail-on:
@@ -63,6 +70,7 @@ runs:
       shell: bash
       env:
         PATHS: ${{ inputs.paths }}
+        EXCLUDE: ${{ inputs.exclude }}
         FAIL_ON: ${{ inputs.fail-on }}
         MIN_SEVERITY: ${{ inputs.min-severity }}
         SARIF_FILE: ${{ inputs.sarif-file }}
@@ -71,6 +79,10 @@ runs:
         echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
         args=(detect --format github --sarif "$SARIF_FILE"
               --fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
+        read -r -a patterns <<< "$EXCLUDE"
+        for pattern in ${patterns[@]+"${patterns[@]}"}; do
+          args+=(--exclude "$pattern")
+        done
         if [[ -n "$PATHS" ]]; then
           read -r -a files <<< "$PATHS"
           glyphguard "${args[@]}" -- "${files[@]}"

@@ -77,6 +77,8 @@ $ glyphguard inspect -e 'Invoice\N{RIGHT-TO-LEFT OVERRIDE}fdp.exe'   # explain e
 $ pbpaste | glyphguard inspect                         # ...or whatever is on your clipboard
 $ glyphguard detect $(git ls-files)                    # file:line:col findings, exit 1 at --fail-on
 $ glyphguard sanitize -p llm-input < prompt.txt        # cleaned text on stdout
+$ glyphguard check -p admin -p support "$NAME"         # disguised protected terms, exit 1 if found
+$ glyphguard confusable paypal "$NAME"                 # can these pass for each other?
 $ glyphguard catalog                                   # every technique and profile
 ```
 
@@ -148,14 +150,43 @@ class RevealFilter(logging.Filter):
 assert gg.reveal("user=bob\N{LINE SEPARATOR}level=admin") == "user=bob<U+2028>level=admin"
 ```
 
-**Vet display names.** Blank names, reversed text and stacked marks don't survive:
+**Vet display names.** Blank names, reversed text and stacked marks don't survive, and
+lookalike letters fold back to what they pass for:
 
 ```python
 import glyphguard as gg
 
 assert gg.sanitize("\N{RIGHT-TO-LEFT OVERRIDE}admin\N{BRAILLE PATTERN BLANK}", "display-name").text == "admin"
 assert gg.inspect("\N{HANGUL FILLER}").findings  # renders as nothing: flagged
+assert gg.sanitize("p\N{CYRILLIC SMALL LETTER A}yp\N{CYRILLIC SMALL LETTER A}l", "display-name").text == "paypal"
 ```
+
+**Protect names and keywords.** A `Guard` finds protected terms however they are
+disguised: lookalike letters from other scripts, styled letters, accents, leetspeak,
+separators, repeated letters and invisible characters. Each match has an exact span and
+says which tricks were used:
+
+```python
+import glyphguard as gg
+
+guard = gg.Guard(["admin", "support"])
+
+result = guard.check("Contact the \N{CYRILLIC SMALL LETTER A}dm1n team")
+assert result.blocked
+match = result.matches[0]
+assert match.span == (12, 17) and match.techniques == ("leetspeak", "lookalike")
+
+assert guard.check("s.u.p.p.0.r.t").blocked
+assert not guard.check("badminton and supportive friends").blocked  # whole words only
+
+# Stop new accounts from impersonating existing ones.
+taken = {gg.canonicalize(name) for name in ["alice", "admin"]}
+assert gg.canonicalize("\N{CYRILLIC CAPITAL LETTER A}L\N{LATIN SMALL LETTER I WITH ACUTE}CE") in taken
+assert gg.is_confusable("p\N{CYRILLIC SMALL LETTER A}ypal", "paypal")  # UTS #39 skeletons
+```
+
+`Guard` also takes `mode="contains"` (match inside words, with an `allow` list for words
+like "supportive") and `mode="exact"` (the whole text is the term).
 
 **Block hidden Unicode in pull requests.** The
 [GitHub Action](https://github.com/marketplace/actions/glyphguard) scans every tracked file,
@@ -176,6 +207,7 @@ jobs:
           fail-on: medium        # info | low | medium | high | critical
           upload-sarif: true     # show findings under Security > Code scanning
           # paths: "prompts/ docs/README.md"   # default: every file tracked by git
+          # exclude: "tests/fixtures *.snap"   # globs to skip
 ```
 
 Or run it before every commit with [pre-commit](https://pre-commit.com):
@@ -190,11 +222,12 @@ repos:
 
 From any CI system, `glyphguard detect --format github` prints the same annotations,
 `--format sarif` (or `--sarif FILE` alongside another format) writes SARIF 2.1.0 for code
-scanning dashboards, and `--files0-from -` reads a `git ls-files -z` listing from stdin.
+scanning dashboards, `--files0-from -` reads a `git ls-files -z` listing from stdin, and
+`--exclude GLOB` skips files and directories.
 
 ## What it detects
 
-25 techniques in five families. Each has a stable ID, a default severity, and CWE and MITRE
+29 techniques in six families. Each has a stable ID, a default severity, and CWE and MITRE
 ATLAS references in the [catalog](src/glyphguard/catalog.toml).
 
 | Family | Techniques |
@@ -204,10 +237,12 @@ ATLAS references in the [catalog](src/glyphguard/catalog.toml).
 | **BIDI** | overrides, embeddings and isolates, unterminated controls (Trojan Source), stray direction marks |
 | **CTRL** | C0/C1 controls including backspace deletion attacks; terminal escapes: OSC 8 hidden links, OSC 52 clipboard writes, SGR conceal, cursor movement; Unicode line separators |
 | **MARK** | Zalgo stacks, overlay marks drawn through letters, orphaned marks |
+| **CONF** lookalikes | letters from another script hiding in a word (UTS #39 mixed-script confusables), whole words spelled in a lookalike script, styled letters (mathematical, fullwidth), numbers that mix digit systems |
 
 **Real text stays clean.** Emoji ZWJ sequences, subdivision flags, keycaps, skin tones,
 ideographic variation sequences, joiners in Persian and Indic scripts, direction marks in
-Arabic and Hebrew, and stacked marks in Tibetan and pointed Hebrew are not flagged. A
+Arabic and Hebrew, stacked marks in Tibetan and pointed Hebrew, Russian or Greek words in
+English text, fullwidth forms in Chinese and Japanese, and IPA are not flagged. A
 [multilingual benign corpus](tests/vectors/benign.toml) enforces this on every commit.
 
 ## Sanitization profiles
@@ -221,7 +256,8 @@ Arabic and Hebrew, and stacked marks in Tibetan and pointed Hebrew are not flagg
 | `reveal` | Replaces flagged characters with visible `<U+XXXX>` markers. |
 
 Profiles are [plain data](src/glyphguard/profiles.toml). Each one maps techniques or whole
-families to `keep`, `remove`, `replace`, `space`, `newline`, `escape` or `trim`.
+families to `keep`, `remove`, `replace`, `space`, `newline`, `escape`, `trim` or `fold`
+(lookalike letters back to the ASCII they pass for).
 
 ## Performance
 
@@ -231,18 +267,16 @@ letters in any script cost almost nothing.
 | Input | Throughput |
 |---|---|
 | ASCII | ~600 M code points/s |
-| Mixed Cyrillic, CJK, Arabic, Vietnamese and emoji | ~7 M code points/s |
-| Hindi (dense combining marks) | ~15 M code points/s |
+| Mixed Cyrillic, CJK, Arabic, Vietnamese and emoji | ~4 M code points/s |
+| Hindi (dense combining marks) | ~13 M code points/s |
 
 Numbers come from `python scripts/bench.py` and depend on hardware.
 
 ## Roadmap
 
-GlyphGuard is **pre-alpha**. v0.1, the detection, decoding and sanitization core described
-here, is done. Next:
+GlyphGuard is **pre-alpha**. Done: the detection, decoding and sanitization core (v0.1),
+and lookalike detection with UTS #39 skeletons and protected-term matching (v0.2). Next:
 
-- **v0.2 confusables:** UTS #39 skeletons, mixed-script and lookalike detection, and
-  protected-term matching that survives homoglyphs, leetspeak and spacing tricks.
 - **v0.3 scanning:** agent-config scanning presets (rules files, `AGENTS.md`, MCP tool
   descriptions) and pinning of MCP tool descriptions to catch rug pulls.
 - **v0.4 red team:** a mutator for every technique, plus adapters for PyRIT, garak and

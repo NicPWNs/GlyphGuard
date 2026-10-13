@@ -128,3 +128,35 @@ text = "\u2200x \u2208 \u211D: x\u00B2 \u2265 0"
 [[sample]]
 name = "Devanagari Vedic accents"
 text = "\u0905\u0951\u0917\u094D\u0928\u093F\u0952"
+
+[[sample]]
+name = "Russian word in English text"
+text = "The Russian word for peace is \u043C\u0438\u0440."
+
+[[sample]]
+name = "Greek letters in a formula"
+text = "Use \u03B1 = 0.05 and \u03B2 = 0.2"
+
+[[sample]]
+name = "Japanese with romaji"
+text = "Tokyo (\u6771\u4EAC) \u3067\u3059"
+
+[[sample]]
+name = "Arabic-Indic numerals"
+text = "\u0661\u0662\u0663 \u0627\u0644"
+
+[[sample]]
+name = "Ukrainian place name"
+text = "\u041A\u0438\u0457\u0432 (Kyiv)"
+
+[[sample]]
+name = "Chinese date with fullwidth digits"
+text = "\u4ECA\u5E74\u662F\uFF12\uFF10\uFF12\uFF16\u5E74\u3002"
+
+[[sample]]
+name = "Japanese with fullwidth Latin"
+text = "\uFF21\uFF29\u306E\u7814\u7A76\u3068\uFF34\uFF4F\uFF4B\uFF59\uFF4F\u3002"
+
+[[sample]]
+name = "Korean with fullwidth digits"
+text = "\uAC00\uACA9\uC740 \uFF11\uFF12\uFF10\uC6D0"

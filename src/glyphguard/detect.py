@@ -13,12 +13,13 @@ import base64
 import binascii
 import re
 import sys
+import unicodedata
 from array import array
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from dataclasses import dataclass
-from functools import cache
+from dataclasses import dataclass, replace
+from functools import cache, lru_cache
 
-from glyphguard import stego, ucd
+from glyphguard import confusables, stego, ucd
 from glyphguard.catalog import Severity, resolve
 from glyphguard.findings import Finding, Payload
 
@@ -743,6 +744,202 @@ def _mark_findings(
         )
 
 
+# --- CONF: lookalike characters -----------------------------------------------------
+
+# Compatibility letters that are routine in their own right: modifier letters (IPA),
+# letterlike symbols (mathematics), Latin-1 ordinals and typographic ligatures.
+_ROUTINE_COMPAT = ((0x00AA, 0x00BA), (0x2100, 0x214F), (0xFB00, 0xFB06))
+# Scripts whose text routinely uses fullwidth ASCII forms.
+_EAST_ASIAN = frozenset({"Han", "Hiragana", "Katakana", "Hangul", "Bopomofo"})
+_ASCII_LETTER = re.compile(r"[A-Za-z]")
+_ANY_LETTER = re.compile(r"[^\W\d_]")
+
+
+@cache
+def _lookalike_ranges() -> list[tuple[int, int]]:
+    """Non-ASCII characters that can pass for ASCII letters or digits."""
+    points = range(0x80, 0x20000)
+    return _merge((cp, cp) for cp in points if confusables.ascii_lookalike(chr(cp)))
+
+
+@cache
+def _confusable_pattern() -> re.Pattern[str]:
+    """Characters that can pass for ASCII letters or digits, and non-ASCII decimal digits."""
+    ranges = [(a, b) for a, b in ucd.category_ranges(frozenset({"Nd"})) if not a <= 0x30 <= b]
+    return re.compile(_any_of(_merge([*ranges, *_lookalike_ranges()])))
+
+
+@cache
+def _word_pattern() -> re.Pattern[str]:
+    """A run of word characters: letters, marks, decimal digits and ASCII lookalikes."""
+    categories = frozenset({"Lu", "Ll", "Lt", "Lm", "Lo", "Mn", "Mc", "Me", "Nd"})
+    ranges = [*ucd.category_ranges(categories), *_lookalike_ranges()]
+    return re.compile(f"{_any_of(_merge(ranges))}*")
+
+
+def _merge(ranges: Iterable[tuple[int, int]]) -> list[tuple[int, int]]:
+    merged: list[tuple[int, int]] = []
+    for start, end in sorted(ranges):
+        if merged and start <= merged[-1][1] + 1:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _is_word_char(cp: int) -> bool:
+    category = ucd.general_category(cp)
+    return (
+        category[0] in "LM" or category == "Nd" or confusables.ascii_lookalike(chr(cp)) is not None
+    )
+
+
+def _reads_as(word: str) -> str:
+    return "".join(confusables.fold_char(c) for c in word)
+
+
+def _detect_confusables(t: _Text, opts: Options) -> Iterator[Finding]:
+    text, cps = t.text, t.cps
+    search, word_run = _confusable_pattern().search, _word_pattern().match
+    latin_text: bool | None = None
+    east_asian_text: bool | None = None
+    end = 0
+    while (match := search(text, end)) is not None:
+        start = match.start()
+        while start > end and _is_word_char(cps[start - 1]):
+            start -= 1
+        end = word_run(text, match.end()).end()  # type: ignore[union-attr]  # matches ""
+        word = text[start:end]
+        found = _word_findings(word) if len(word) <= 64 else _analyze_word(word)
+        for f in found:
+            severity = f.severity
+            # Whole-script words only matter in Latin text, and fullwidth forms are routine
+            # in East Asian text. Deciding which this text is costs a pass, so do it lazily.
+            if f.technique_id == "GG-CONF-002":
+                if latin_text is None:
+                    ascii_letters = len(_ASCII_LETTER.findall(text))
+                    latin_text = ascii_letters * 2 >= len(_ANY_LETTER.findall(text)) > 0
+                if not latin_text:
+                    continue
+            elif _is_fullwidth(f):
+                if east_asian_text is None:
+                    east_asian_text = _east_asian_pattern().search(text) is not None
+                if east_asian_text:
+                    severity = INFO
+            yield replace(f, start=f.start + start, end=f.end + start, severity=severity)
+
+
+@cache
+def _east_asian_pattern() -> re.Pattern[str]:
+    points = range(0x1100, 0x32400)
+    return re.compile(_any_of(_merge((cp, cp) for cp in points if ucd.script(cp) in _EAST_ASIAN)))
+
+
+def _is_fullwidth(f: Finding) -> bool:
+    return f.technique_id == "GG-CONF-003" and all(0xFF01 <= cp <= 0xFF5E for cp in f.codepoints)
+
+
+@lru_cache(maxsize=8192)
+def _word_findings(word: str) -> tuple[Finding, ...]:
+    """Findings in one word, with offsets relative to the word, cached because real text
+    repeats its words."""
+    return _analyze_word(word)
+
+
+def _analyze_word(word: str) -> tuple[Finding, ...]:
+    return tuple(_word_items(_Text(word, []), word))
+
+
+def _word_items(t: _Text, word: str) -> Iterator[Finding]:
+    cps, start, end = t.cps, 0, t.n
+    yield from _mixed_numerals(t, start, end)
+
+    compat = {
+        i
+        for i in range(start, end)
+        if unicodedata.normalize("NFKC", chr(cps[i])) != chr(cps[i])
+        and confusables.ascii_lookalike(chr(cps[i])) is not None
+    }
+    letters = [
+        i for i in range(start, end) if ucd.general_category(cps[i])[0] == "L" or i in compat
+    ]
+    if compat and len(letters) >= 2:
+        east_asian = any(ucd.script(cps[i]) in _EAST_ASIAN for i in letters)
+        items: list[Item] = []
+        for i in sorted(compat):
+            routine = (
+                ucd.general_category(cps[i]) == "Lm"
+                or any(a <= cps[i] <= b for a, b in _ROUTINE_COMPAT)
+                or (east_asian and 0xFF01 <= cps[i] <= 0xFF5E)
+            )
+            items.append((i, "GG-CONF-003", INFO if routine else LOW))
+        yield from _group(t, items, f"in a word that reads as {_reads_as(word)!a}")
+
+    plain = [i for i in letters if i not in compat]
+    by_script: dict[str, list[int]] = {}
+    for i in plain:
+        script = ucd.script(cps[i])
+        if script not in ("Common", "Inherited"):
+            by_script.setdefault(script, []).append(i)
+    if not by_script:
+        return
+    main = max(by_script, key=lambda s: (len(by_script[s]), s == "Latin"))
+    if len(by_script) > 1 and confusables.is_mixed_script("".join(chr(cps[i]) for i in plain)):
+        items = sorted(
+            (i, "GG-CONF-001", HIGH)
+            for script, indices in by_script.items()
+            if script != main
+            for i in indices
+            if _looks_like_script(chr(cps[i]), main)
+        )
+        context = f"inside a {main} word that reads as {_reads_as(word)!a}"
+        yield from _group(t, items, context)
+    elif (
+        main != "Latin"
+        and len(plain) >= 2
+        and all(confusables.ascii_lookalike(chr(cps[i])) for i in plain)
+    ):
+        yield t.finding(
+            "GG-CONF-002",
+            start,
+            end,
+            MEDIUM,
+            f"All-{main} word that reads as {_reads_as(word)!a} in Latin text",
+        )
+
+
+def _looks_like_script(char: str, script: str) -> bool:
+    """True if ``char`` (from another script) has a lookalike among ``script``'s letters."""
+    if script == "Latin":
+        return confusables.ascii_lookalike(char) is not None
+    return script in confusables.lookalike_scripts(confusables.skeleton(char))
+
+
+def _mixed_numerals(t: _Text, start: int, end: int) -> Iterator[Finding]:
+    cps = t.cps
+    i = start
+    while i < end:
+        if ucd.general_category(cps[i]) != "Nd":
+            i += 1
+            continue
+        run_start = i
+        zeros: dict[int, int] = {}
+        while i < end and ucd.general_category(cps[i]) == "Nd":
+            zero = cps[i] - unicodedata.decimal(chr(cps[i]), 0)
+            zeros[zero] = zeros.get(zero, 0) + 1
+            i += 1
+        if len(zeros) > 1:
+            systems = ", ".join(ucd.label(z) for z in sorted(zeros))
+            yield t.finding(
+                "GG-CONF-004",
+                run_start,
+                i,
+                MEDIUM,
+                f"Number mixes {len(zeros)} digit systems (zeros: {systems}); "
+                f"reads as {_reads_as(t.text[run_start:i])!a}",
+            )
+
+
 # --- Public API ---------------------------------------------------------------------
 
 Detector = Callable[[_Text, Options], Iterable[Finding]]
@@ -756,6 +953,7 @@ DETECTORS: tuple[Detector, ...] = (
     _detect_bidi,
     _detect_controls,
     _detect_marks,
+    _detect_confusables,
 )
 
 
@@ -783,7 +981,11 @@ def detect(
     floor = Severity.parse(min_severity)
     allowed = resolve(techniques) if techniques is not None else None
     runs = [m.span() for m in _trigger_pattern().finditer(text)]
-    if not runs and not _may_have_mark_findings(text, options):
+    if (
+        not runs
+        and not _may_have_mark_findings(text, options)
+        and not _confusable_pattern().search(text)
+    ):
         return []
     t = _Text(text, runs)
     findings = [

@@ -14,6 +14,30 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ### Added
 
+- Lookalike detection, a new CONF family of four techniques built on UTS #39 data
+  (`confusables.txt`, `IdentifierStatus.txt`):
+  - GG-CONF-001: letters from another script hiding in a word.
+  - GG-CONF-002: whole words spelled in a lookalike script inside Latin text.
+  - GG-CONF-003: styled letters (mathematical, fullwidth and so on).
+  - GG-CONF-004: numbers that mix digit systems.
+
+  Russian, Greek, Japanese and other native text is not flagged. Neither are IPA,
+  mathematical notation, or fullwidth forms in East Asian text, which are info-level
+  at most.
+- A `fold` sanitize action, used for CONF by the `llm-input`, `llm-output`,
+  `display-name` and `strict` profiles. It turns lookalike letters back into what they
+  pass for, judged by the script of the word around them. `reveal` now escapes every
+  character of a lookalike word.
+- `glyphguard.Guard`: protected-term matching that survives lookalike letters, styled
+  letters, accents, leetspeak, separators, repeated letters and invisible characters.
+  - Modes: `word`, `contains` and `exact`, plus an allowlist.
+  - Each match reports its exact span and per-character evidence of the tricks used.
+  - Matching stays linear on adversarial input.
+- New functions: `glyphguard.canonicalize()` (a comparison key for names),
+  `skeleton()`, `is_confusable()` and `restriction_level()`, plus the
+  `glyphguard.confusables` module (script sets, mixed-script tests, lookalike lookups).
+- New commands: `glyphguard check`, `glyphguard skeleton` and `glyphguard confusable`.
+- `glyphguard detect --exclude GLOB` and a matching `exclude` input on the GitHub Action.
 - Python 3.15 support, tested in CI on Linux, macOS and Windows.
 - Coverage-guided fuzzing with ClusterFuzzLite and Atheris (`fuzz/`): short runs on every
   pull request and a weekly batch run.
