@@ -5,8 +5,16 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import glyphguard as gg
+
 README = Path(__file__).resolve().parent.parent / "README.md"
 BLOCK = re.compile(r"```python\n(.*?)```", re.DOTALL)
+
+
+def test_readme_technique_count_matches_catalog() -> None:
+    claimed = re.search(r"^(\d+) techniques in", README.read_text(encoding="utf-8"), re.M)
+    assert claimed is not None
+    assert int(claimed.group(1)) == len(gg.techniques())
 
 
 def test_readme_examples_run() -> None:

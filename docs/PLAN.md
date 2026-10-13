@@ -354,7 +354,7 @@ Still open:
 
 **v0.1 Foundation: done, apart from publishing.**
 
-- Catalog of 27 techniques: INV x10, SMUG x4, BIDI x4, CTRL x4, MARK x3.
+- Catalog of 25 techniques: INV x10, SMUG x4, BIDI x4, CTRL x4, MARK x3.
 - `detect`, `payloads`, `inspect`, `sanitize` (5 profiles), `reveal`.
 - `stego` encoders and decoders: tags, variation selectors, zero-width binary.
 - CLI: `inspect`, `detect`, `sanitize`, `catalog`.

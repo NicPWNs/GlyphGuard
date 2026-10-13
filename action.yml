@@ -1,7 +1,5 @@
 name: GlyphGuard
-description: >-
-  Find hidden Unicode in your repository (invisible text, smuggled payloads, bidi
-  overrides, terminal escapes) and annotate it inline on pull requests.
+description: Find hidden Unicode (invisible text, smuggled payloads, bidi overrides, terminal escapes) in pull requests.
 author: Nic Jones
 branding:
   icon: eye
@@ -22,10 +20,30 @@ inputs:
     description: Hide findings below this severity.
     required: false
     default: low
+  upload-sarif:
+    description: >-
+      Upload the results to GitHub code scanning (Security tab) as well as annotating the
+      diff. Needs `security-events: write` permission and code scanning enabled, which is
+      free for public repositories.
+    required: false
+    default: "false"
+  sarif-file:
+    description: Where to write the SARIF 2.1.0 results.
+    required: false
+    default: glyphguard.sarif
+  category:
+    description: Code scanning category, to tell several GlyphGuard runs apart.
+    required: false
+    default: glyphguard
   python-version:
     description: Python version used to run GlyphGuard (3.11 or later).
     required: false
     default: "3.13"
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF results file.
+    value: ${{ steps.scan.outputs.sarif-file }}
 
 runs:
   using: composite
@@ -41,17 +59,28 @@ runs:
       run: python -m pip install --quiet --disable-pip-version-check "$ACTION_PATH"
 
     - name: Scan for hidden Unicode
+      id: scan
       shell: bash
       env:
         PATHS: ${{ inputs.paths }}
         FAIL_ON: ${{ inputs.fail-on }}
         MIN_SEVERITY: ${{ inputs.min-severity }}
+        SARIF_FILE: ${{ inputs.sarif-file }}
       run: |
         set -euo pipefail
-        args=(detect --format github --fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
+        echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        args=(detect --format github --sarif "$SARIF_FILE"
+              --fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
         if [[ -n "$PATHS" ]]; then
           read -r -a files <<< "$PATHS"
           glyphguard "${args[@]}" -- "${files[@]}"
         else
           git ls-files -z | glyphguard "${args[@]}" --files0-from -
         fi
+
+    - name: Upload to code scanning
+      if: ${{ !cancelled() && inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: ${{ inputs.category }}

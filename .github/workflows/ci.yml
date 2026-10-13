@@ -85,9 +85,13 @@ jobs:
       - run: python scripts/gen_data.py --check
 
   dogfood:
-    # GlyphGuard scans its own repository, through its own GitHub Action.
+    # GlyphGuard scans its own repository, through its own GitHub Action, and reports to
+    # the Security tab on pushes (pull requests from forks get a read-only token).
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to code scanning
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -95,6 +99,7 @@ jobs:
       - uses: ./ # zizmor: ignore[self-repository]
         with:
           fail-on: low
+          upload-sarif: ${{ github.event_name == 'push' }}
 
   workflows:
     # Security lint for this repository's GitHub Actions workflows.

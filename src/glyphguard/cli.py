@@ -19,6 +19,7 @@ from glyphguard.detect import detect
 from glyphguard.findings import Finding
 from glyphguard.report import inspect
 from glyphguard.sanitize import profiles, reveal, sanitize
+from glyphguard.sarif import Located, to_sarif
 
 EXIT_OK, EXIT_FINDINGS, EXIT_ERROR = 0, 1, 2
 
@@ -172,6 +173,19 @@ def _paths_from(source: str) -> list[str]:
     return [os.fsdecode(p) for p in data.split(b"\0") if p]
 
 
+def _expand_directories(paths: list[str]) -> list[str]:
+    """Replace each directory with the files under it, skipping version-control folders."""
+    expanded: list[str] = []
+    for path in paths:
+        if path == "-" or not os.path.isdir(path):
+            expanded.append(path)
+            continue
+        for root, dirs, files in os.walk(path):
+            dirs[:] = sorted(d for d in dirs if d not in (".git", ".hg", ".svn"))
+            expanded.extend(os.path.join(root, name) for name in sorted(files))
+    return expanded
+
+
 def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
     sources: list[tuple[str, str]] = []
     if args.text is not None:
@@ -179,13 +193,14 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
     paths = list(args.paths)
     if args.files0_from is not None:
         paths += _paths_from(args.files0_from)
-    for path in paths:
+    for path in _expand_directories(paths):
         if path == "-":
             sources.append(("<stdin>", sys.stdin.buffer.read().decode("utf-8", "surrogateescape")))
         else:
             data = Path(path).read_bytes()
             if not args.binary and b"\0" in data[:8192]:
-                print(f"glyphguard: skipping binary file {path}", file=sys.stderr)
+                if path in args.paths:  # only mention files the user named explicitly
+                    print(f"glyphguard: skipping binary file {path}", file=sys.stderr)
                 continue
             sources.append((path, data.decode("utf-8", errors="surrogateescape")))
     if args.text is None and not args.paths and args.files0_from is None:
@@ -194,6 +209,7 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
     fail_on = Severity.parse(args.fail_on)
     worst: Severity | None = None
     records: list[dict[str, Any]] = []
+    located: list[Located] = []
     for name, text in sources:
         findings: list[Finding] = detect(
             text, techniques=args.technique or None, min_severity=args.min_severity
@@ -201,6 +217,11 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
         for f in findings:
             worst = f.severity if worst is None else max(worst, f.severity)
             line, col = _line_col(text, f.start)
+            end_line, end_col = _line_col(text, f.end)
+            location = None if name.startswith("<") else name
+            located.append(Located(location, f, line, col, end_line, end_col))
+            if args.format == "sarif":
+                continue
             if args.format == "json":
                 records.append({"source": name, "line": line, "column": col, **f.to_dict()})
             elif args.format == "github":
@@ -213,6 +234,12 @@ def cmd_detect(args: argparse.Namespace, out: _Out) -> int:
                 )
     if args.format == "json":
         out(json.dumps(records, indent=2))
+    if args.format == "sarif" or args.sarif:
+        log = json.dumps(to_sarif(located, version=glyphguard.__version__), indent=2)
+        if args.format == "sarif":
+            out(log)
+        if args.sarif:
+            Path(args.sarif).write_text(log + "\n", encoding="utf-8")
     return EXIT_FINDINGS if worst is not None and worst >= fail_on else EXIT_OK
 
 
@@ -318,9 +345,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--format",
-        choices=("text", "json", "github"),
+        choices=("text", "json", "github", "sarif"),
         default="text",
-        help="github: workflow-command annotations that appear inline on pull requests",
+        help="github: inline pull-request annotations; sarif: SARIF 2.1.0 for code scanning",
+    )
+    p.add_argument(
+        "--sarif",
+        metavar="FILE",
+        help="also write a SARIF 2.1.0 log to FILE, whatever --format is",
     )
     p.add_argument(
         "--files0-from",

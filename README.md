@@ -154,19 +154,24 @@ assert gg.sanitize("\N{RIGHT-TO-LEFT OVERRIDE}admin\N{BRAILLE PATTERN BLANK}", "
 assert gg.inspect("\N{HANGUL FILLER}").findings  # renders as nothing: flagged
 ```
 
-**Block hidden Unicode in pull requests.** The GitHub Action scans every tracked file and
-annotates findings inline on the diff:
+**Block hidden Unicode in pull requests.** The
+[GitHub Action](https://github.com/marketplace/actions/glyphguard) scans every tracked file,
+annotates findings inline on the diff, and can report them to the Security tab:
 
 ```yaml
-on: [pull_request]
+on: [push, pull_request]
+permissions:
+  contents: read
+  security-events: write   # only needed for upload-sarif
 jobs:
   glyphguard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: NicPWNs/GlyphGuard@v0.1.0
+      - uses: NicPWNs/GlyphGuard@v0.1.2
         with:
-          fail-on: medium      # info | low | medium | high | critical
+          fail-on: medium        # info | low | medium | high | critical
+          upload-sarif: true     # show findings under Security > Code scanning
           # paths: "prompts/ docs/README.md"   # default: every file tracked by git
 ```
 
@@ -180,12 +185,13 @@ repos:
       - id: glyphguard
 ```
 
-`glyphguard detect --format github` emits the same annotations from any CI script, and
-`--files0-from -` reads a `git ls-files -z` listing from stdin.
+From any CI system, `glyphguard detect --format github` prints the same annotations,
+`--format sarif` (or `--sarif FILE` alongside another format) writes SARIF 2.1.0 for code
+scanning dashboards, and `--files0-from -` reads a `git ls-files -z` listing from stdin.
 
 ## What it detects
 
-27 techniques in five families. Each has a stable ID, a default severity, and CWE and MITRE
+25 techniques in five families. Each has a stable ID, a default severity, and CWE and MITRE
 ATLAS references in the [catalog](src/glyphguard/catalog.toml).
 
 | Family | Techniques |
@@ -234,8 +240,8 @@ here, is done. Next:
 
 - **v0.2 confusables:** UTS #39 skeletons, mixed-script and lookalike detection, and
   protected-term matching that survives homoglyphs, leetspeak and spacing tricks.
-- **v0.3 scanning:** repository and agent-config scanning (rules files, `AGENTS.md`, MCP
-  tool descriptions) with SARIF output for GitHub code scanning.
+- **v0.3 scanning:** agent-config scanning presets (rules files, `AGENTS.md`, MCP tool
+  descriptions) and pinning of MCP tool descriptions to catch rug pulls.
 - **v0.4 red team:** a mutator for every technique, plus adapters for PyRIT, garak and
   promptfoo, and guardrail robustness scoring.
 - **v0.5 integrations:** LLM SDK and framework middleware, and an MCP server.

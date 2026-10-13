@@ -6,6 +6,20 @@ All notable changes to GlyphGuard are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- SARIF 2.1.0 output: `glyphguard detect --format sarif`, or `--sarif FILE` alongside any
+  other format. Every catalog technique is a rule with CWE tags and a GitHub
+  `security-severity` score, and every finding has an exact line and column range.
+- GitHub Action inputs `upload-sarif`, `sarif-file` and `category`, to report findings to
+  GitHub code scanning (the Security tab), plus a `sarif-file` output.
+- `glyphguard detect` scans directories recursively, skipping `.git`, `.hg` and `.svn`.
+
+### Fixed
+
+- The README and CHANGELOG said the catalog has 27 techniques; it has 25. A test now
+  checks the README against the catalog.
+
 ## [0.1.1] - 2026-10-13
 
 ### Fixed
@@ -20,7 +34,7 @@ First release: the detection, decoding and sanitization core.
 
 ### Added
 
-- Technique catalog of 27 techniques in five families (INV, SMUG, BIDI, CTRL, MARK), with
+- Technique catalog of 25 techniques in five families (INV, SMUG, BIDI, CTRL, MARK), with
   stable IDs, severities, CWE and MITRE ATLAS references.
 - `detect()`, `payloads()` and `inspect()`, with exact spans. Hidden payloads are decoded
   from tag characters, variation selectors, zero-width binary and terminal escapes (OSC 8

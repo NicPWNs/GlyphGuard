@@ -108,6 +108,18 @@ def test_github_escaping() -> None:
     assert _gh_property("a,b:c") == "a%2Cb%3Ac"
 
 
+def test_detect_walks_directories(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    (tmp_path / "prompts" / "deep").mkdir(parents=True)
+    (tmp_path / "prompts" / "deep" / "evil.txt").write_bytes(b"fun\xe2\x80\x8bding\n")
+    (tmp_path / "prompts" / "clean.txt").write_text("fine\n", encoding="utf-8")
+    (tmp_path / "prompts" / ".git").mkdir()
+    (tmp_path / "prompts" / ".git" / "ignored").write_bytes(b"\xe2\x80\x8b")
+    code, out = run(capsys, "detect", str(tmp_path / "prompts"))
+    assert code == 1
+    assert "evil.txt:1:4: medium GG-INV-001" in out
+    assert "ignored" not in out
+
+
 def test_detect_files0_from(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
     clean, evil = tmp_path / "clean.txt", tmp_path / "evil.txt"
     clean.write_text("fine\n", encoding="utf-8")
